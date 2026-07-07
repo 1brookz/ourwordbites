@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Our Word Games</title>
+
+<!-- Home-screen / full-screen app settings for iPhone -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Our Word Games">
+<meta name="theme-color" content="#fff8d6">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+
+<style>
+  :root {
+    --bg-top: #fff8d6;
+    --bg-bottom: #ffe38f;
+    --board-fill: #fffdf2;
+    --board-line: #eedfa8;
+    --tile-fill: #fffef8;
+    --tile-border: #d64545;
+    --text: #6d4c1b;
+    --accent: #e63946;
+    --chip-found: #8ccc99;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  body {
+    font-family: ui-rounded, -apple-system, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
+    background: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom));
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .screen.active { display: flex; }
+
+  /* ---------- Home ---------- */
+
+  #home { align-items: center; justify-content: center; gap: 22px; padding: 24px; overflow-y: auto; }
+
+  .home-title-block { text-align: center; }
+  .home-emoji { font-size: 50px; }
+  h1 { font-size: 36px; font-weight: 900; letter-spacing: -0.5px; }
+  .subtitle { margin-top: 6px; font-size: 14px; opacity: 0.7; max-width: 300px; }
+
+  .cards { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 380px; }
+
+  .card {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--tile-fill);
+    border: 1.5px solid rgba(214,69,69,0.3);
+    border-radius: 22px;
+    padding: 14px 18px;
+    box-shadow: 0 4px 10px rgba(190,140,30,0.2);
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .card:active { transform: scale(0.97); }
+  .card .big-emoji { font-size: 34px; }
+  .card .info { flex: 1; }
+  .card .kicker { font-size: 11px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; }
+  .card .name { font-size: 20px; font-weight: 800; }
+  .card .count { font-size: 12px; opacity: 0.6; }
+  .card .chev { font-size: 22px; color: var(--accent); }
+
+  .footer-note { font-size: 12px; opacity: 0.5; }
+
+  /* ---------- Shared game header ---------- */
+
+  .game-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px 2px;
+  }
+  #game, #anagram { padding-top: max(10px, env(safe-area-inset-top)); }
+
+  .icon-btn {
+    background: none; border: none; font-size: 26px; color: var(--accent);
+    cursor: pointer; padding: 4px; line-height: 1;
+    font-family: inherit;
+  }
+  .game-titles { flex: 1; }
+  .game-kicker { font-size: 10px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; }
+  .game-name { font-size: 24px; font-weight: 900; line-height: 1.1; }
+
+  .hint-line {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    font-style: italic;
+    opacity: 0.75;
+    padding: 2px 20px 0;
+    min-height: 18px;
+  }
+
+  /* ---------- WordBites ---------- */
+
+  .chips {
+    display: flex; flex-wrap: wrap; gap: 7px;
+    justify-content: center;
+    padding: 8px 14px 4px;
+  }
+  .chip {
+    font-size: 12px; font-weight: 800;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--tile-fill);
+    border: 1.5px solid var(--board-line);
+    color: rgba(109,76,27,0.55);
+    letter-spacing: 1.5px;
+    transition: all 0.25s ease;
+  }
+  .chip.found {
+    background: var(--chip-found);
+    border-color: var(--chip-found);
+    color: #fff;
+  }
+
+  #board-wrap {
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px 10px 4px;
+    min-height: 0;
+  }
+
+  #board {
+    position: relative;
+    background: var(--board-fill);
+    border: 2px solid var(--board-line);
+    border-radius: 16px;
+    touch-action: none;
+    overflow: hidden;
+  }
+  #grid-canvas { position: absolute; inset: 0; }
+
+  .tile {
+    position: absolute;
+    top: 0; left: 0;
+    display: flex;
+    background: var(--tile-fill);
+    border: 2px solid var(--tile-border);
+    border-radius: 22%/45%;
+    box-shadow: 0 2px 4px rgba(214,69,69,0.25);
+    cursor: grab;
+    z-index: 1;
+    will-change: transform;
+  }
+  .tile.snap { transition: transform 0.18s ease; }
+  .tile.dragging {
+    z-index: 10;
+    box-shadow: 0 8px 16px rgba(214,69,69,0.45);
+    cursor: grabbing;
+  }
+  .tile span {
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900;
+    color: var(--text);
+  }
+  .tile span + span { border-left: 1px solid rgba(214,69,69,0.25); }
+
+  .tip { text-align: center; font-size: 11px; opacity: 0.5; padding: 2px 14px 10px; }
+
+  /* ---------- Anagrams ---------- */
+
+  #anagram-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .letter-bank { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .bank-tile {
+    width: 48px; height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 900;
+    color: var(--text);
+    background: var(--tile-fill);
+    border: 2px solid var(--tile-border);
+    border-radius: 12px;
+    box-shadow: 0 3px 6px rgba(214,69,69,0.25);
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+  .bank-tile:active { transform: scale(0.92); }
+  .bank-tile.used { opacity: 0.25; pointer-events: none; }
+
+  .entry-row {
+    min-height: 46px;
+    min-width: 190px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 4px;
+    background: var(--board-fill);
+    border: 2px dashed var(--board-line);
+    border-radius: 14px;
+    padding: 6px 16px;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 4px;
+  }
+  .entry-row.shake { animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-7px); }
+    50% { transform: translateX(7px); }
+    75% { transform: translateX(-4px); }
+  }
+  .entry-placeholder { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; opacity: 0.4; }
+
+  .anagram-controls { display: flex; gap: 10px; }
+  .ctrl-btn {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 10px 18px;
+    border-radius: 999px;
+    border: 2px solid var(--tile-border);
+    background: var(--tile-fill);
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  .ctrl-btn:active { transform: scale(0.94); }
+  .ctrl-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .found-counter { font-size: 13px; font-weight: 800; opacity: 0.7; }
+
+  .found-words {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: center;
+    max-width: 380px;
+  }
+  .found-word {
+    font-size: 13px; font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--chip-found);
+    color: #fff;
+    letter-spacing: 1px;
+    animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes pop-in {
+    from { transform: scale(0.5); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  /* ---------- Toast ---------- */
+
+  #toast {
+    position: absolute;
+    left: 50%; bottom: 46px;
+    transform: translate(-50%, 24px);
+    background: var(--accent);
+    color: #fff;
+    font-weight: 900;
+    font-size: 16px;
+    padding: 10px 24px;
+    border-radius: 999px;
+    box-shadow: 0 6px 14px rgba(230,57,70,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 200;
+    max-width: 86vw;
+    text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- Win overlay ---------- */
+
+  #overlay {
+    position: absolute; inset: 0;
+    display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.35);
+    z-index: 100;
+    padding: 28px;
+  }
+  #overlay.show { display: flex; }
+
+  .win-box {
+    background: var(--tile-fill);
+    border-radius: 26px;
+    padding: 28px 26px;
+    text-align: center;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+    max-width: 330px;
+    width: 100%;
+    animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    z-index: 110;
+  }
+  @keyframes pop {
+    from { transform: scale(0.7); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  .win-kicker { font-size: 17px; font-weight: 700; opacity: 0.75; }
+  .win-msg { font-size: 25px; font-weight: 900; margin-top: 10px; line-height: 1.3; }
+  .win-ps { font-size: 14px; font-weight: 700; opacity: 0.75; margin-top: 12px; line-height: 1.4; }
+  .win-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+
+  .pill-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    padding: 12px 22px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  .pill-btn:active { transform: scale(0.94); }
+
+  /* ---------- Heart confetti ---------- */
+
+  #hearts { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 105; }
+  .heart {
+    position: absolute;
+    top: -60px;
+    animation-name: fall;
+    animation-timing-function: ease-in;
+    animation-iteration-count: infinite;
+  }
+  @keyframes fall {
+    to { transform: translateY(calc(100vh + 120px)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .heart { animation: none; display: none; }
+    .tile.snap { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HOME ============ -->
+<div id="home" class="screen active">
+  <div class="home-title-block">
+    <div class="home-emoji">❤️</div>
+    <h1>Our Word Games</h1>
+    <div class="subtitle">A few little games, made for one very special person</div>
+  </div>
+  <div class="cards" id="cards"></div>
+  <div class="footer-note">made with ❤️ just for you</div>
+</div>
+
+<!-- ============ WORDBITES GAME ============ -->
+<div id="game" class="screen">
+  <div class="game-header">
+    <button class="icon-btn" id="back-btn" aria-label="Back to games">←</button>
+    <div class="game-titles">
+      <div class="game-kicker">Our WordBites</div>
+      <div class="game-name" id="game-name"></div>
+    </div>
+    <button class="icon-btn" id="shuffle-btn" aria-label="Shuffle the board">↻</button>
+  </div>
+
+  <div class="hint-line" id="hint-line"></div>
+
+  <div class="chips" id="chips"></div>
+
+  <div id="board-wrap">
+    <div id="board">
+      <canvas id="grid-canvas"></canvas>
+      <!-- tiles injected here -->
+    </div>
+  </div>
+
+  <div class="tip">tip: leave an empty square between finished words · a letter is revealed every 30s</div>
+</div>
+
+<!-- ============ ANAGRAMS GAME ============ -->
+<div id="anagram" class="screen">
+  <div class="game-header">
+    <button class="icon-btn" id="ana-back-btn" aria-label="Back to games">←</button>
+    <div class="game-titles">
+      <div class="game-kicker">Anagrams</div>
+      <div class="game-name">🔤 Mystery Word</div>
+    </div>
+    <button class="icon-btn" id="ana-shuffle-btn" aria-label="Shuffle the letters">↻</button>
+  </div>
+
+  <div class="hint-line">how many words can you make from these six letters?</div>
+
+  <div id="anagram-body">
+    <div class="letter-bank" id="letter-bank"></div>
+
+    <div class="entry-row" id="entry-row">
+      <span class="entry-placeholder">tap letters to build a word</span>
+    </div>
+
+    <div class="anagram-controls">
+      <button class="ctrl-btn" id="ana-backspace">⌫</button>
+      <button class="ctrl-btn" id="ana-clear">Clear</button>
+      <button class="ctrl-btn primary" id="ana-enter">Enter</button>
+    </div>
+
+    <div class="found-counter" id="found-counter"></div>
+    <div class="found-words" id="found-words"></div>
+  </div>
+</div>
+
+<!-- global toast + overlay (shared by both games) -->
+<div id="toast"></div>
+
+<div id="overlay">
+  <div id="hearts"></div>
+  <div class="win-box">
+    <div class="win-kicker" id="win-kicker"></div>
+    <div class="win-msg" id="win-msg"></div>
+    <div class="win-ps" id="win-ps"></div>
+    <div class="win-buttons" id="win-buttons"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ================= WordBites level data ================= */
+
+const LEVELS = [
+  {
+    id: 1, title: "You", emoji: "❤️",
+    hint: "words I would use to describe you",
+    words: ["pretty", "kind", "sweet", "kiss", "caring"],
+    winKicker: "That's you ❤️",
+    winMsg: "Every single one of those words is about you.",
+    question: false
+  },
+  {
+    id: 2, title: "Us", emoji: "🎮",
+    hint: "things we like to do",
+    words: ["games", "shows", "music", "gist"],
+    winKicker: "That's us 🎶",
+    winMsg: "All the little things that make us, us.",
+    question: false
+  },
+  {
+    id: 3, title: "Question", emoji: "💌",
+    hint: "",
+    words: ["will", "you", "be", "mine", "girlfriend"],
+    winKicker: "So...",
+    winMsg: "Will you be my girlfriend?",
+    question: true
+  }
+];
+
+const ROWS = 12, COLS = 10;
+const REVEAL_INTERVAL_MS = 30000; // one letter of every word revealed every 30s
+
+/* ================= Anagrams data ================= */
+
+const ANAGRAM_LETTERS = "nhyira";  // the special word (shown scrambled)
+
+// All accepted English words buildable from N, H, Y, I, R, A (each letter used once).
+// Edit this list freely to add or remove words.
+const ANAGRAM_WORDS = [
+  // 2 letters
+  "ah", "ai", "an", "ay", "ha", "hi", "in", "na", "ya",
+  // 3 letters
+  "ain", "air", "ani", "any", "hay", "hin", "nah", "nay",
+  "rah", "rai", "ran", "ray", "ria", "rin", "rya", "yah", "yar", "yin",
+  // 4 letters
+  "airy", "ayin", "hair", "nary", "rain", "rani", "yarn",
+  // 5 letters
+  "hairy", "rainy"
+];
+
+/* ================= Shared state ================= */
+
+let level = null;
+let tiles = [];
+let found = new Set();
+let cell = 32;
+let winShown = false;
+let toastTimer = null;
+let revealTimer = null;
+let revealCount = 0;
+
+let anaBank = [];          // [{letter, used}]
+let anaEntry = [];         // indexes into anaBank
+let anaFound = new Set();
+
+/* ================= Home screen ================= */
+
+const cardsEl = document.getElementById("cards");
+
+LEVELS.forEach(lv => {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML =
+    '<div class="big-emoji">' + lv.emoji + '</div>' +
+    '<div class="info">' +
+      '<div class="kicker">Our WordBites · Round ' + lv.id + '</div>' +
+      '<div class="name">' + lv.title + '</div>' +
+      '<div class="count">' + lv.words.length + ' words to build</div>' +
+    '</div>' +
+    '<div class="chev">›</div>';
+  card.addEventListener("click", () => startGame(lv));
+  cardsEl.appendChild(card);
+});
+
+const anaCard = document.createElement("div");
+anaCard.className = "card";
+anaCard.innerHTML =
+  '<div class="big-emoji">🔤</div>' +
+  '<div class="info">' +
+    '<div class="kicker">Anagrams</div>' +
+    '<div class="name">Mystery Word</div>' +
+    '<div class="count">' + ANAGRAM_WORDS.length + ' words hiding in 6 letters</div>' +
+  '</div>' +
+  '<div class="chev">›</div>';
+anaCard.addEventListener("click", startAnagrams);
+cardsEl.appendChild(anaCard);
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function goHome() {
+  hideOverlay();
+  stopRevealTimer();
+  showScreen("home");
+}
+
+document.getElementById("back-btn").addEventListener("click", goHome);
+document.getElementById("ana-back-btn").addEventListener("click", goHome);
+
+document.getElementById("shuffle-btn").addEventListener("click", () => {
+  if (level) startGame(level);
+});
+
+/* ================= WordBites: setup ================= */
+
+function chunksOf(word) {
+  const out = [];
+  let rest = word.toLowerCase().split("");
+  while (rest.length) {
+    const take = rest.length === 1 ? 1 : (Math.random() < 0.5 ? 2 : 1);
+    out.push(rest.slice(0, take).join(""));
+    rest = rest.slice(take);
+  }
+  return out;
+}
+
+function buildTiles(lv) {
+  const list = [];
+  let idc = 0;
+  for (const word of lv.words) {
+    for (const chunk of chunksOf(word)) {
+      list.push({ id: "t" + (idc++), letters: chunk, span: chunk.length, row: 0, col: 0, el: null });
+    }
+  }
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+function scatter(list) {
+  const occupied = new Set();
+  for (const t of list) {
+    for (let attempt = 0; attempt < 600; attempt++) {
+      const row = Math.floor(Math.random() * ROWS);
+      const col = Math.floor(Math.random() * (COLS - t.span + 1));
+      let free = true;
+      for (let i = 0; i < t.span; i++) {
+        if (occupied.has(row + "," + (col + i))) { free = false; break; }
+      }
+      if (free) {
+        t.row = row; t.col = col;
+        for (let i = 0; i < t.span; i++) occupied.add(row + "," + (col + i));
+        break;
+      }
+    }
+  }
+}
+
+function startGame(lv) {
+  level = lv;
+  found = new Set();
+  winShown = false;
+  hideOverlay();
+
+  for (let attempt = 0; attempt < 40; attempt++) {
+    tiles = buildTiles(lv);
+    scatter(tiles);
+    if (wordsOnBoard().size === 0) break;
+  }
+
+  document.getElementById("game-name").textContent = lv.emoji + " " + lv.title;
+  document.getElementById("hint-line").textContent = lv.hint ? "hint: " + lv.hint : "";
+  renderChips();
+  startRevealTimer();
+  showScreen("game");
+  layoutBoard();
+}
+
+/* ================= WordBites: timed letter reveal ================= */
+
+function startRevealTimer() {
+  stopRevealTimer();
+  revealCount = 0;
+  revealTimer = setInterval(() => {
+    revealCount++;
+    renderChips();
+    const longest = Math.max(...level.words.map(w => w.length));
+    if (revealCount >= longest - 1) stopRevealTimer(); // never fully reveal a word
+  }, REVEAL_INTERVAL_MS);
+}
+
+function stopRevealTimer() {
+  if (revealTimer) { clearInterval(revealTimer); revealTimer = null; }
+}
+
+/* ================= WordBites: chips ================= */
+
+function renderChips() {
+  const el = document.getElementById("chips");
+  el.innerHTML = "";
+  for (const word of level.words) {
+    const w = word.toLowerCase();
+    const chip = document.createElement("div");
+    const isFound = found.has(w);
+    chip.className = "chip" + (isFound ? " found" : "");
+    if (isFound) {
+      chip.textContent = word.toUpperCase() + " ✓";
+    } else {
+      const revealed = Math.min(revealCount, word.length - 1);
+      chip.textContent = word.slice(0, revealed).toUpperCase() + "•".repeat(word.length - revealed);
+    }
+    el.appendChild(chip);
+  }
+}
+
+/* ================= WordBites: board ================= */
+
+const board = document.getElementById("board");
+const gridCanvas = document.getElementById("grid-canvas");
+
+function layoutBoard() {
+  const wrap = document.getElementById("board-wrap");
+  const rect = wrap.getBoundingClientRect();
+  const availW = rect.width - 8;
+  const availH = rect.height - 8;
+  cell = Math.floor(Math.min(availW / COLS, availH / ROWS));
+  if (cell < 20) cell = 20;
+
+  const w = cell * COLS, h = cell * ROWS;
+  board.style.width = w + "px";
+  board.style.height = h + "px";
+
+  drawGrid(w, h);
+  renderTiles();
+}
+
+function drawGrid(w, h) {
+  const dpr = window.devicePixelRatio || 1;
+  gridCanvas.width = w * dpr;
+  gridCanvas.height = h * dpr;
+  gridCanvas.style.width = w + "px";
+  gridCanvas.style.height = h + "px";
+  const ctx = gridCanvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(238,223,168,0.7)";
+  ctx.lineWidth = 1;
+  for (let c = 1; c < COLS; c++) {
+    ctx.beginPath(); ctx.moveTo(c * cell + 0.5, 0); ctx.lineTo(c * cell + 0.5, h); ctx.stroke();
+  }
+  for (let r = 1; r < ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r * cell + 0.5); ctx.lineTo(w, r * cell + 0.5); ctx.stroke();
+  }
+}
+
+function renderTiles() {
+  board.querySelectorAll(".tile").forEach(el => el.remove());
+
+  for (const t of tiles) {
+    const el = document.createElement("div");
+    el.className = "tile";
+    el.style.width = (cell * t.span) + "px";
+    el.style.height = cell + "px";
+    for (const ch of t.letters) {
+      const s = document.createElement("span");
+      s.textContent = ch.toUpperCase();
+      s.style.width = cell + "px";
+      s.style.height = cell + "px";
+      s.style.fontSize = (cell * 0.52) + "px";
+      el.appendChild(s);
+    }
+    t.el = el;
+    positionTile(t);
+    attachDrag(t);
+    board.appendChild(el);
+  }
+}
+
+function positionTile(t, dx, dy) {
+  const x = t.col * cell + (dx || 0);
+  const y = t.row * cell + (dy || 0);
+  t.el.style.transform = "translate3d(" + x + "px," + y + "px,0)";
+}
+
+/* ================= WordBites: dragging ================= */
+
+function attachDrag(t) {
+  let startX = 0, startY = 0, active = false;
+
+  t.el.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    active = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    t.el.setPointerCapture(e.pointerId);
+    t.el.classList.remove("snap");
+    t.el.classList.add("dragging");
+  });
+
+  t.el.addEventListener("pointermove", e => {
+    if (!active) return;
+    positionTile(t, e.clientX - startX, e.clientY - startY);
+  });
+
+  const finish = e => {
+    if (!active) return;
+    active = false;
+    t.el.classList.remove("dragging");
+
+    const dCols = Math.round((e.clientX - startX) / cell);
+    const dRows = Math.round((e.clientY - startY) / cell);
+    const target = { row: t.row + dRows, col: t.col + dCols };
+
+    if (isLegalMove(t, target)) {
+      t.row = target.row;
+      t.col = target.col;
+    }
+    t.el.classList.add("snap");
+    positionTile(t);
+    detectWords();
+  };
+
+  t.el.addEventListener("pointerup", finish);
+  t.el.addEventListener("pointercancel", finish);
+}
+
+function isLegalMove(tile, target) {
+  if (target.row < 0 || target.row >= ROWS) return false;
+  if (target.col < 0 || target.col + tile.span - 1 >= COLS) return false;
+  const others = new Set();
+  for (const t of tiles) {
+    if (t.id === tile.id) continue;
+    for (let i = 0; i < t.span; i++) others.add(t.row + "," + (t.col + i));
+  }
+  for (let i = 0; i < tile.span; i++) {
+    if (others.has(target.row + "," + (target.col + i))) return false;
+  }
+  return true;
+}
+
+/* ================= WordBites: word detection ================= */
+
+function letterMap() {
+  const map = new Map();
+  for (const t of tiles) {
+    for (let i = 0; i < t.span; i++) {
+      map.set(t.row + "," + (t.col + i), t.letters[i]);
+    }
+  }
+  return map;
+}
+
+function wordsOnBoard() {
+  const targets = new Set(level.words.map(w => w.toLowerCase()));
+  const map = letterMap();
+  const hit = new Set();
+  const check = run => { if (targets.has(run)) hit.add(run); };
+
+  for (let r = 0; r < ROWS; r++) {
+    let run = "";
+    for (let c = 0; c < COLS; c++) {
+      const ch = map.get(r + "," + c);
+      if (ch) run += ch; else { check(run); run = ""; }
+    }
+    check(run);
+  }
+  for (let c = 0; c < COLS; c++) {
+    let run = "";
+    for (let r = 0; r < ROWS; r++) {
+      const ch = map.get(r + "," + c);
+      if (ch) run += ch; else { check(run); run = ""; }
+    }
+    check(run);
+  }
+  return hit;
+}
+
+function detectWords() {
+  const onBoard = wordsOnBoard();
+  let newest = null;
+  for (const w of onBoard) {
+    if (!found.has(w)) { found.add(w); newest = w; }
+  }
+  if (!newest) return;
+
+  renderChips();
+  showToast(newest.toUpperCase() + " ✓");
+
+  if (found.size === level.words.length && !winShown) {
+    winShown = true;
+    stopRevealTimer();
+    setTimeout(showWin, 900);
+  }
+}
+
+/* ================= Anagrams ================= */
+
+function scrambled(word) {
+  const arr = word.split("");
+  for (let tries = 0; tries < 50; tries++) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    const s = arr.join("");
+    if (s !== word && !ANAGRAM_WORDS.includes(s)) return arr;
+  }
+  return arr;
+}
+
+function startAnagrams() {
+  anaFound = new Set();
+  anaEntry = [];
+  anaBank = scrambled(ANAGRAM_LETTERS).map(letter => ({ letter, used: false }));
+  hideOverlay();
+  renderBank();
+  renderEntry();
+  renderFound();
+  showScreen("anagram");
+}
+
+document.getElementById("ana-shuffle-btn").addEventListener("click", () => {
+  // reshuffle remaining letters, keep progress
+  anaEntry = [];
+  anaBank = scrambled(anaBank.map(b => b.letter).join("")).map(letter => ({ letter, used: false }));
+  renderBank();
+  renderEntry();
+});
+
+function renderBank() {
+  const el = document.getElementById("letter-bank");
+  el.innerHTML = "";
+  anaBank.forEach((b, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "bank-tile" + (b.used ? " used" : "");
+    btn.textContent = b.letter.toUpperCase();
+    btn.addEventListener("click", () => {
+      if (b.used) return;
+      b.used = true;
+      anaEntry.push(idx);
+      renderBank();
+      renderEntry();
+    });
+    el.appendChild(btn);
+  });
+}
+
+function renderEntry() {
+  const el = document.getElementById("entry-row");
+  el.innerHTML = "";
+  if (anaEntry.length === 0) {
+    const ph = document.createElement("span");
+    ph.className = "entry-placeholder";
+    ph.textContent = "tap letters to build a word";
+    el.appendChild(ph);
+    return;
+  }
+  for (const idx of anaEntry) {
+    const s = document.createElement("span");
+    s.textContent = anaBank[idx].letter.toUpperCase();
+    el.appendChild(s);
+  }
+}
+
+function anaBackspace() {
+  const idx = anaEntry.pop();
+  if (idx !== undefined) anaBank[idx].used = false;
+  renderBank();
+  renderEntry();
+}
+
+function anaClear() {
+  for (const idx of anaEntry) anaBank[idx].used = false;
+  anaEntry = [];
+  renderBank();
+  renderEntry();
+}
+
+function shakeEntry() {
+  const el = document.getElementById("entry-row");
+  el.classList.remove("shake");
+  void el.offsetWidth; // restart animation
+  el.classList.add("shake");
+}
+
+function anaSubmit() {
+  const word = anaEntry.map(i => anaBank[i].letter).join("").toLowerCase();
+  if (!word) return;
+
+  // Easter egg: she finds the special word itself
+  if (word === ANAGRAM_LETTERS) {
+    showToast("✨ NHYIRA — it means blessing. That's you. ❤️");
+    anaClear();
+    return;
+  }
+
+  if (anaFound.has(word)) {
+    showToast("already found!");
+    shakeEntry();
+    anaClear();
+    return;
+  }
+
+  if (ANAGRAM_WORDS.includes(word)) {
+    anaFound.add(word);
+    showToast(word.toUpperCase() + " ✓");
+    anaClear();
+    renderFound();
+    if (anaFound.size === ANAGRAM_WORDS.length) {
+      setTimeout(showAnagramWin, 700);
+    }
+  } else {
+    shakeEntry();
+    anaClear();
+  }
+}
+
+document.getElementById("ana-backspace").addEventListener("click", anaBackspace);
+document.getElementById("ana-clear").addEventListener("click", anaClear);
+document.getElementById("ana-enter").addEventListener("click", anaSubmit);
+
+function renderFound() {
+  document.getElementById("found-counter").textContent =
+    "Found " + anaFound.size + " of " + ANAGRAM_WORDS.length;
+
+  const el = document.getElementById("found-words");
+  el.innerHTML = "";
+  const sorted = [...anaFound].sort((a, b) => a.length - b.length || a.localeCompare(b));
+  for (const w of sorted) {
+    const chip = document.createElement("div");
+    chip.className = "found-word";
+    chip.textContent = w.toUpperCase();
+    el.appendChild(chip);
+  }
+}
+
+function showAnagramWin() {
+  showOverlayBase(
+    "Wow 🤩",
+    "You found every single word!",
+    "P.S. the six letters unscramble to NHYIRA — it means blessing. Which is exactly what you are. ❤️",
+    [{ label: "Back to games", action: goHome }]
+  );
+}
+
+/* ================= Toast ================= */
+
+function showToast(text) {
+  const toast = document.getElementById("toast");
+  toast.textContent = text;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+/* ================= Win overlay ================= */
+
+function showOverlayBase(kicker, msg, ps, buttons) {
+  document.getElementById("win-kicker").textContent = kicker;
+  document.getElementById("win-msg").textContent = msg;
+  document.getElementById("win-ps").textContent = ps || "";
+
+  const btns = document.getElementById("win-buttons");
+  btns.innerHTML = "";
+  for (const b of buttons) {
+    const btn = document.createElement("button");
+    btn.className = "pill-btn";
+    btn.textContent = b.label;
+    btn.addEventListener("click", b.action);
+    btns.appendChild(btn);
+  }
+
+  spawnHearts();
+  document.getElementById("overlay").classList.add("show");
+}
+
+function showWin() {
+  if (level.question) {
+    showOverlayBase(level.winKicker, level.winMsg, "", [
+      { label: "Yes ❤️", action: saidYes },
+      { label: "Obviously 😍", action: saidYes }
+    ]);
+  } else {
+    showOverlayBase(level.winKicker, level.winMsg, "", [
+      { label: "Back to games", action: goHome }
+    ]);
+  }
+}
+
+function saidYes() {
+  showOverlayBase("", "Yay!!! 🥳❤️", "", [
+    { label: "Best game ever ❤️", action: goHome }
+  ]);
+  spawnHearts(); // extra hearts, because she said yes
+}
+
+function hideOverlay() {
+  document.getElementById("overlay").classList.remove("show");
+  document.getElementById("hearts").innerHTML = "";
+}
+
+function spawnHearts() {
+  const container = document.getElementById("hearts");
+  const emojis = ["❤️", "❣️", "♥️"];
+  for (let i = 0; i < 22; i++) {
+    const h = document.createElement("div");
+    h.className = "heart";
+    h.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    h.style.left = (3 + Math.random() * 94) + "%";
+    h.style.fontSize = (16 + Math.random() * 26) + "px";
+    h.style.animationDuration = (2.2 + Math.random() * 1.6) + "s";
+    h.style.animationDelay = (Math.random() * 1.4) + "s";
+    container.appendChild(h);
+  }
+}
+
+/* ================= Resize handling ================= */
+
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  if (!level || !document.getElementById("game").classList.contains("active")) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(layoutBoard, 120);
+});
+</script>
+</body>
+</html>

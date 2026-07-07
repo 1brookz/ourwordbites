@@ -1,0 +1,15 @@
+{
+  "name": "Our Word Games",
+  "short_name": "Our Word Games",
+  "display": "standalone",
+  "background_color": "#fff8d6",
+  "theme_color": "#fff8d6",
+  "start_url": ".",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
