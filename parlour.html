@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Our Word Games">
-<meta name="theme-color" content="#FAFAFA">
+<meta name="theme-color" content="#FBF5E8">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,16 +17,16 @@
 <style>
 /* Layout: shared top nav, then one narrow centred game column (max 560px) on a pale ground */
 :root{
-  --bg:#FAFAFA; --surface:#FFFFFF; --soft:#F1F1F0; --line:#E6E6E4;
-  --text:#1A1A1A; --muted:#86868B;
-  --tile:#FFFFFF; --tile-line:#1A1A1A;
-  --primary:#1A1A1A; --on-primary:#FFFFFF;
+  --bg:#FBF5E8; --surface:#FFFDF8; --soft:#F3EBDA; --line:#E6DAC2;
+  --text:#2A2118; --muted:#7D6E58;
+  --tile:#FFFDF8; --tile-line:#2A2118;
+  --primary:#DDB872; --on-primary:#3B2A12;
   --good:#2E8CA3; --good-soft:#E3F1F4; --warn:#C98A00; --bad:#D64545;
   --font:"Manrope",-apple-system,"Segoe UI",system-ui,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
-body{font-family:var(--font);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{min-height:100vh;min-height:100dvh;font-family:var(--font);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--good);outline-offset:2px}
@@ -79,13 +79,13 @@ h2{font-weight:700;font-size:19px;margin:0;letter-spacing:-.02em;text-wrap:balan
 .seg button[aria-pressed="true"]{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
 .note{font-size:13px;color:var(--muted);background:var(--bg);border-radius:12px;padding:10px 12px}
 .banner{display:flex;align-items:center;gap:10px;background:var(--primary);color:var(--on-primary);border-radius:14px;padding:10px 12px;font-weight:600}
-.banner .btn{background:var(--on-primary);color:var(--primary);padding:7px 14px}
+.banner .btn{background:var(--surface);color:var(--text);padding:7px 14px}
 
 .hud{display:flex;align-items:center;gap:14px}
 .clock{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
 .clock span{font-weight:800;font-size:22px;font-variant-numeric:tabular-nums;line-height:1}
 .bar{height:4px;border-radius:2px;background:var(--soft);overflow:hidden}
-.bar i{display:block;height:100%;width:100%;background:var(--good);transform-origin:left;transition:background .3s}
+.bar i{display:block;height:100%;width:100%;background:#C99A4B;transform-origin:left;transition:background .3s}
 .sc{text-align:right}
 .sc b{font-weight:800;font-size:30px;display:block;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .sc small{color:var(--muted);font-size:12px}
@@ -138,10 +138,18 @@ h2{font-weight:700;font-size:19px;margin:0;letter-spacing:-.02em;text-wrap:balan
 .legend span{display:flex;align-items:center;gap:5px}
 .legend i{width:12px;height:12px;border-radius:4px;display:inline-block;background:var(--bg)}
 .sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center}
-.count{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(250,250,250,.92);font-weight:800;font-size:120px;color:var(--text);letter-spacing:-.05em}
+.count{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(251,245,232,.92);font-weight:800;font-size:120px;color:var(--text);letter-spacing:-.05em}
 .loading{text-align:center;padding:40px 0;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
+
+/* game backgrounds (play + results) */
+body[data-game="an"]:not([data-screen="home"]){background-color:#FDEBDD;background-image:radial-gradient(#EDB797 1.3px,transparent 1.5px);background-size:18px 18px}
+body[data-game="hunt"]:not([data-screen="home"]){background-color:#E8EFFB}
+body[data-game="hunt"]:not([data-screen="home"])::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect x='20' y='20' width='80' height='80' rx='16' fill='%23D3E0F8' transform='rotate(14 60 60)'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Crect x='20' y='20' width='100' height='100' rx='18' fill='%23D3E0F8' transform='rotate(-10 70 70)'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect x='12' y='12' width='36' height='36' rx='8' fill='%23C7D7F5' transform='rotate(22 30 30)'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right -24px top 70px,left -40px bottom -30px,right 24px bottom 40px}
+body[data-game="bites"]:not([data-screen="home"]){background-color:#FCE8EE;background-image:radial-gradient(#F3BDCC 2px,transparent 2.4px),radial-gradient(#F3BDCC 2px,transparent 2.4px);background-size:16px 16px;background-position:0 0,8px 8px}
 [hidden]{display:none!important}
 body:not([data-screen="home"]) .hero{display:none}
 </style>
@@ -155,7 +163,7 @@ body:not([data-screen="home"]) .hero{display:none}
 <div class="wrap">
   <div class="hero">
     <h1>Word Parlour</h1>
-    <p>Anagrams, Grid Hunt and Block Words. Everything unlocked, every word revealed at the end. Play solo or live with a friend.</p>
+    <p>Anagrams, Word Hunt and Word Bites. Everything unlocked, every word revealed at the end. Play solo or live with a friend.</p>
     <div class="nick"><label for="nick">Your name</label><input id="nick" maxlength="14" autocomplete="off"></div>
   </div>
   <main id="main"></main>
@@ -277,7 +285,7 @@ function shuffle(a, r) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) {
 const counts = s => { const c = {}; for (const ch of s) c[ch] = (c[ch] || 0) + 1; return c; };
 const fits = (w, c) => { const d = {}; for (const ch of w) { d[ch] = (d[ch] || 0) + 1; if (d[ch] > (c[ch] || 0)) return false; } return true; };
 const COLORS = ["#FF7A9A", "#5BE3A8", "#7FB2FF", "#FFC24B", "#C99BFF", "#FF9F6B"];
-const NAMES = { an: "Anagrams", hunt: "Grid Hunt", bites: "Block Words" };
+const NAMES = { an: "Anagrams", hunt: "Word Hunt", bites: "Word Bites" };
 
 // ---------- scoring ----------
 const ANA_PTS = { 3: 100, 4: 400, 5: 1200, 6: 2000, 7: 3000 };
@@ -448,14 +456,14 @@ function renderHome() {
       <button class="btn primary" data-play="an">${startLbl}</button>
     </section>
     <section class="panel game">
-      <div class="top"><div style="flex:1;min-width:0"><h2>Grid Hunt</h2><p>Swipe through touching letters, diagonals too, to spell words. Each tile once per word.</p></div>
+      <div class="top"><div style="flex:1;min-width:0"><h2>Word Hunt</h2><p>Swipe through touching letters, diagonals too, to spell words. Each tile once per word.</p></div>
         <div class="mini" aria-hidden="true" style="display:grid;grid-template-columns:repeat(3,22px)"><span>C</span><span>A</span><span>T</span><span>O</span><span>R</span><span>E</span></div></div>
       <div class="opt"><span class="lbl">Board</span><div class="seg">${segBtns("hunt", "size", [[4, "4×4"], [5, "5×5"]])}</div></div>
       <div class="opt"><span class="lbl">Time</span><div class="seg">${segBtns("hunt", "time", [[80, "80s"], [120, "2 min"], [180, "3 min"], [0, "No timer"]])}</div></div>
       <button class="btn primary" data-play="hunt">${startLbl}</button>
     </section>
     <section class="panel game">
-      <div class="top"><div style="flex:1;min-width:0"><h2>Block Words</h2><p>Drag letter blocks around the board. Words count reading left to right or top to bottom.</p></div>
+      <div class="top"><div style="flex:1;min-width:0"><h2>Word Bites</h2><p>Drag letter blocks around the board. Words count reading left to right or top to bottom.</p></div>
         <div class="mini" aria-hidden="true"><span>B</span><span style="width:40px">IT</span><span>E</span></div></div>
       <div class="opt"><span class="lbl">Time</span><div class="seg">${segBtns("bites", "time", [[80, "80s"], [120, "2 min"], [180, "3 min"], [0, "No timer"]])}</div></div>
       <button class="btn primary" data-play="bites">${startLbl}</button>
@@ -510,7 +518,7 @@ function renderRoom() {
 // ---------- game lifecycle ----------
 async function startGame(g, countdown) {
   S.invite = null; S.lastStarted = Math.max(S.lastStarted, g.id); stopTimer();
-  S.screen = "play"; document.body.dataset.screen = "play"; window.scrollTo(0, 0); main.innerHTML = `<div class="loading">Shuffling letters…</div>`;
+  S.screen = "play"; document.body.dataset.screen = "play"; document.body.dataset.game = g.t; window.scrollTo(0, 0); main.innerHTML = `<div class="loading">Shuffling letters…</div>`;
   await loadDict();
   await new Promise(r => setTimeout(r, 20));
   const o = g.o || {};
@@ -642,7 +650,7 @@ function playAn() {
   draw();
 }
 
-// Grid Hunt
+// Word Hunt
 function playHunt() {
   const { grid, N } = G.data;
   const w = Math.min(main.clientWidth, 380), hs = Math.floor((w - (N - 1) * 8) / N);
@@ -676,12 +684,12 @@ function playHunt() {
   board.addEventListener("pointerup", end); board.addEventListener("pointercancel", end);
 }
 
-// Block Words
+// Word Bites
 function playBites() {
   const P = G.data.pieces;
   const cs = Math.floor(Math.min(main.clientWidth, 440) / BW);
   const ar = $("#arena");
-  ar.innerHTML = `<p class="muted" style="margin:0 0 10px;text-align:center;font-size:13px">Drag a block to an empty spot. New words through the moved block score.</p><div class="bites" id="bites" style="--cs:${cs}px;width:${cs * BW + 2}px;height:${cs * BH + 2}px"></div>`;
+  ar.innerHTML = `<p class="muted" style="margin:0 0 10px;text-align:center;font-size:13px">Drag a block to an empty spot. A whole unbroken row or column that spells a word scores.</p><div class="bites" id="bites" style="--cs:${cs}px;width:${cs * BW + 2}px;height:${cs * BH + 2}px"></div>`;
   const board = $("#bites");
   const pos = (el, p) => { el.style.left = p.x * cs + "px"; el.style.top = p.y * cs + "px"; el.style.width = (p.k === "h" ? 2 : 1) * cs + "px"; el.style.height = (p.k === "v" ? 2 : 1) * cs + "px"; };
   const grid = () => { const g = Array.from({ length: BH }, () => Array(BW).fill(null)); for (const p of P) for (const [x, y, ch] of cellsOf(p)) g[y][x] = { ch, p }; return g; };
