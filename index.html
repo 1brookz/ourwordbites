@@ -10,21 +10,26 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Our Word Games">
-<meta name="theme-color" content="#fff8d6">
+<meta name="theme-color" content="#FAFAFA">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
 <style>
+  /* Layout: shared top nav, then full-height screens below it; nav hides while a game is open */
   :root {
-    --bg-top: #fff8d6;
-    --bg-bottom: #ffe38f;
-    --board-fill: #fffdf2;
-    --board-line: #eedfa8;
-    --tile-fill: #fffef8;
-    --tile-border: #d64545;
-    --text: #6d4c1b;
-    --accent: #e63946;
-    --chip-found: #8ccc99;
+    --bg: #FAFAFA;
+    --surface: #FFFFFF;
+    --soft: #F1F1F0;
+    --line: #E6E6E4;
+    --text: #1A1A1A;
+    --muted: #86868B;
+    --primary: #1A1A1A;
+    --on-primary: #FFFFFF;
+    --good: #2E8CA3;
+    --font: "Manrope", -apple-system, "Segoe UI", system-ui, sans-serif;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -40,115 +45,100 @@
   }
 
   body {
-    font-family: ui-rounded, -apple-system, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
-    background: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom));
+    font-family: var(--font);
+    background: var(--bg);
     color: var(--text);
     display: flex;
     flex-direction: column;
+    padding-top: env(safe-area-inset-top);
   }
+
+  /* ---------- Nav (shared with parlour.html) ---------- */
+  .nav { display: flex; align-items: center; gap: 16px; padding: 14px max(20px, env(safe-area-inset-right)) 14px max(20px, env(safe-area-inset-left)); width: 100%; max-width: 1080px; margin: 0 auto; flex: none; }
+  .logo { display: grid; place-items: center; width: 28px; height: 28px; color: var(--text); }
+  .tabs { display: flex; gap: 4px; margin: 0 auto; }
+  .tabs a { font-size: 14px; font-weight: 600; color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 999px; }
+  .tabs a[aria-current="page"] { color: var(--text); background: var(--soft); }
+  .nav .spacer { width: 28px; }
+  body.in-game .nav { display: none; }
+
+  #app { position: relative; flex: 1; min-height: 0; }
 
   .screen {
     position: absolute;
     inset: 0;
     display: none;
     flex-direction: column;
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   .screen.active { display: flex; }
 
   /* ---------- Home ---------- */
+  #home { align-items: center; justify-content: flex-start; gap: 28px; padding: 32px 20px calc(32px + env(safe-area-inset-bottom)); overflow-y: auto; }
 
-  #home { align-items: center; justify-content: center; gap: 22px; padding: 24px; overflow-y: auto; }
+  .home-title-block { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .home-emoji { color: var(--text); line-height: 0; }
+  h1 { font-size: clamp(36px, 9vw, 52px); font-weight: 700; letter-spacing: -0.035em; line-height: 1.05; text-wrap: balance; }
+  .subtitle { font-size: 15px; color: var(--muted); max-width: 300px; line-height: 1.5; }
 
-  .home-title-block { text-align: center; }
-  .home-emoji { font-size: 50px; }
-  h1 { font-size: 36px; font-weight: 900; letter-spacing: -0.5px; }
-  .subtitle { margin-top: 6px; font-size: 14px; opacity: 0.7; max-width: 300px; }
-
-  .cards { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 380px; }
+  .cards { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 400px; }
 
   .card {
     display: flex; align-items: center; gap: 14px;
-    background: var(--tile-fill);
-    border: 1.5px solid rgba(214,69,69,0.3);
-    border-radius: 22px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
     padding: 14px 18px;
-    box-shadow: 0 4px 10px rgba(190,140,30,0.2);
     cursor: pointer;
-    transition: transform 0.12s ease;
+    transition: transform 0.12s ease, border-color 0.15s ease;
   }
-  .card:active { transform: scale(0.97); }
-  .card .big-emoji { font-size: 34px; }
+  .card:hover { border-color: #CFCFCC; }
+  .card:active { transform: scale(0.98); }
+  .card .big-emoji { font-size: 22px; width: 40px; height: 40px; display: grid; place-items: center; background: var(--soft); border-radius: 12px; }
   .card .info { flex: 1; }
-  .card .kicker { font-size: 11px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; }
-  .card .name { font-size: 20px; font-weight: 800; }
-  .card .count { font-size: 12px; opacity: 0.6; }
-  .card .chev { font-size: 22px; color: var(--accent); }
+  .card .kicker { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .card .name { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .card .count { font-size: 13px; color: var(--muted); }
+  .card .chev { font-size: 22px; color: var(--muted); }
 
-  .footer-note { font-size: 12px; opacity: 0.5; }
+  .footer-note { font-size: 12px; color: var(--muted); }
 
   /* ---------- Shared game header ---------- */
-
-  .game-header {
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 16px 2px;
-  }
-  #game, #anagram { padding-top: max(10px, env(safe-area-inset-top)); }
+  .game-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px 2px; }
+  #game, #anagram { padding-top: 6px; }
 
   .icon-btn {
-    background: none; border: none; font-size: 26px; color: var(--accent);
-    cursor: pointer; padding: 4px; line-height: 1;
-    font-family: inherit;
+    background: var(--surface); border: 1px solid var(--line); font-size: 18px; color: var(--text);
+    cursor: pointer; width: 38px; height: 38px; border-radius: 999px; line-height: 1;
+    font-family: inherit; display: grid; place-items: center;
   }
-  .game-titles { flex: 1; }
-  .game-kicker { font-size: 10px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; }
-  .game-name { font-size: 24px; font-weight: 900; line-height: 1.1; }
+  .game-titles { flex: 1; text-align: center; }
+  .game-kicker { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .game-name { font-size: 20px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; }
 
-  .hint-line {
-    text-align: center;
-    font-size: 13px;
-    font-weight: 700;
-    font-style: italic;
-    opacity: 0.75;
-    padding: 2px 20px 0;
-    min-height: 18px;
-  }
+  .hint-line { text-align: center; font-size: 13px; font-weight: 500; color: var(--muted); padding: 4px 20px 0; min-height: 18px; }
 
   /* ---------- WordBites ---------- */
-
-  .chips {
-    display: flex; flex-wrap: wrap; gap: 7px;
-    justify-content: center;
-    padding: 8px 14px 4px;
-  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 10px 14px 4px; }
   .chip {
-    font-size: 12px; font-weight: 800;
+    font-size: 12px; font-weight: 700;
     padding: 5px 12px;
     border-radius: 999px;
-    background: var(--tile-fill);
-    border: 1.5px solid var(--board-line);
-    color: rgba(109,76,27,0.55);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--muted);
     letter-spacing: 1.5px;
     transition: all 0.25s ease;
   }
-  .chip.found {
-    background: var(--chip-found);
-    border-color: var(--chip-found);
-    color: #fff;
-  }
+  .chip.found { background: var(--good); border-color: var(--good); color: #fff; }
 
-  #board-wrap {
-    flex: 1;
-    display: flex; align-items: center; justify-content: center;
-    padding: 8px 10px 4px;
-    min-height: 0;
-  }
+  #board-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px 10px 4px; min-height: 0; }
 
   #board {
     position: relative;
-    background: var(--board-fill);
-    border: 2px solid var(--board-line);
-    border-radius: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
     touch-action: none;
     overflow: hidden;
   }
@@ -158,70 +148,50 @@
     position: absolute;
     top: 0; left: 0;
     display: flex;
-    background: var(--tile-fill);
-    border: 2px solid var(--tile-border);
-    border-radius: 22%/45%;
-    box-shadow: 0 2px 4px rgba(214,69,69,0.25);
+    background: var(--surface);
+    border: 1.5px solid var(--text);
+    border-radius: 9px;
     cursor: grab;
     z-index: 1;
     will-change: transform;
   }
   .tile.snap { transition: transform 0.18s ease; }
-  .tile.dragging {
-    z-index: 10;
-    box-shadow: 0 8px 16px rgba(214,69,69,0.45);
-    cursor: grabbing;
-  }
-  .tile span {
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 900;
-    color: var(--text);
-  }
-  .tile span + span { border-left: 1px solid rgba(214,69,69,0.25); }
+  .tile.dragging { z-index: 10; box-shadow: 0 10px 24px rgba(0,0,0,0.14); cursor: grabbing; }
+  .tile span { display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--text); }
+  .tile span + span { border-left: 1px solid var(--line); }
 
-  .tip { text-align: center; font-size: 11px; opacity: 0.5; padding: 2px 14px 10px; }
+  .tip { text-align: center; font-size: 11px; color: var(--muted); padding: 2px 14px 10px; }
 
   /* ---------- Anagrams ---------- */
-
-  #anagram-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    min-height: 0;
-    overflow-y: auto;
-  }
+  #anagram-body { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 16px; min-height: 0; overflow-y: auto; }
 
   .letter-bank { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   .bank-tile {
-    width: 48px; height: 48px;
+    width: 48px; height: 52px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 24px; font-weight: 900;
+    font-size: 22px; font-weight: 800;
     color: var(--text);
-    background: var(--tile-fill);
-    border: 2px solid var(--tile-border);
-    border-radius: 12px;
-    box-shadow: 0 3px 6px rgba(214,69,69,0.25);
+    background: var(--surface);
+    border: 1.5px solid var(--text);
+    border-radius: 10px;
     cursor: pointer;
     font-family: inherit;
     transition: transform 0.1s ease, opacity 0.15s ease;
   }
   .bank-tile:active { transform: scale(0.92); }
-  .bank-tile.used { opacity: 0.25; pointer-events: none; }
+  .bank-tile.used { opacity: 0.15; pointer-events: none; }
 
   .entry-row {
-    min-height: 46px;
-    min-width: 190px;
+    min-height: 50px;
+    min-width: 200px;
     display: flex; align-items: center; justify-content: center;
     gap: 4px;
-    background: var(--board-fill);
-    border: 2px dashed var(--board-line);
+    background: var(--surface);
+    border: 1.5px dashed var(--line);
     border-radius: 14px;
     padding: 6px 16px;
-    font-size: 26px;
-    font-weight: 900;
+    font-size: 24px;
+    font-weight: 800;
     letter-spacing: 4px;
   }
   .entry-row.shake { animation: shake 0.4s ease; }
@@ -231,62 +201,49 @@
     50% { transform: translateX(7px); }
     75% { transform: translateX(-4px); }
   }
-  .entry-placeholder { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; opacity: 0.4; }
+  .entry-placeholder { font-size: 13px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
 
-  .anagram-controls { display: flex; gap: 10px; }
+  .anagram-controls { display: flex; gap: 8px; }
   .ctrl-btn {
     font-family: inherit;
-    font-size: 15px;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 600;
     padding: 10px 18px;
     border-radius: 999px;
-    border: 2px solid var(--tile-border);
-    background: var(--tile-fill);
+    border: 1px solid var(--line);
+    background: var(--surface);
     color: var(--text);
     cursor: pointer;
     transition: transform 0.1s ease;
   }
-  .ctrl-btn:active { transform: scale(0.94); }
-  .ctrl-btn.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
+  .ctrl-btn:active { transform: scale(0.95); }
+  .ctrl-btn.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 
-  .found-counter { font-size: 13px; font-weight: 800; opacity: 0.7; }
+  .found-counter { font-size: 13px; font-weight: 600; color: var(--muted); }
 
-  .found-words {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    justify-content: center;
-    max-width: 380px;
-  }
+  .found-words { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 380px; }
   .found-word {
-    font-size: 13px; font-weight: 800;
+    font-size: 12px; font-weight: 700;
     padding: 4px 12px;
     border-radius: 999px;
-    background: var(--chip-found);
+    background: var(--good);
     color: #fff;
     letter-spacing: 1px;
     animation: pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  @keyframes pop-in {
-    from { transform: scale(0.5); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
-  }
+  @keyframes pop-in { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
   /* ---------- Toast ---------- */
-
   #toast {
     position: absolute;
-    left: 50%; bottom: 46px;
+    left: 50%; bottom: calc(40px + env(safe-area-inset-bottom));
     transform: translate(-50%, 24px);
-    background: var(--accent);
-    color: #fff;
-    font-weight: 900;
-    font-size: 16px;
-    padding: 10px 24px;
+    background: var(--primary);
+    color: var(--on-primary);
+    font-weight: 700;
+    font-size: 15px;
+    padding: 10px 22px;
     border-radius: 999px;
-    box-shadow: 0 6px 14px rgba(230,57,70,0.4);
     opacity: 0;
     pointer-events: none;
     transition: all 0.3s ease;
@@ -297,65 +254,46 @@
   #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
   /* ---------- Win overlay ---------- */
-
-  #overlay {
-    position: absolute; inset: 0;
-    display: none;
-    align-items: center; justify-content: center;
-    background: rgba(0,0,0,0.35);
-    z-index: 100;
-    padding: 28px;
-  }
+  #overlay { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(250,250,250,0.85); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 100; padding: 28px; }
   #overlay.show { display: flex; }
 
   .win-box {
-    background: var(--tile-fill);
-    border-radius: 26px;
-    padding: 28px 26px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 32px 26px;
     text-align: center;
-    box-shadow: 0 16px 40px rgba(0,0,0,0.3);
-    max-width: 330px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.10);
+    max-width: 340px;
     width: 100%;
     animation: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
     position: relative;
     z-index: 110;
   }
-  @keyframes pop {
-    from { transform: scale(0.7); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
-  }
-  .win-kicker { font-size: 17px; font-weight: 700; opacity: 0.75; }
-  .win-msg { font-size: 25px; font-weight: 900; margin-top: 10px; line-height: 1.3; }
-  .win-ps { font-size: 14px; font-weight: 700; opacity: 0.75; margin-top: 12px; line-height: 1.4; }
-  .win-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+  @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .win-kicker { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .win-msg { font-size: 26px; font-weight: 700; margin-top: 8px; line-height: 1.25; letter-spacing: -0.02em; }
+  .win-ps { font-size: 14px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+  .win-buttons { display: flex; gap: 8px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
 
   .pill-btn {
-    background: var(--accent);
-    color: #fff;
+    background: var(--primary);
+    color: var(--on-primary);
     border: none;
     font-family: inherit;
-    font-size: 16px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: 600;
     padding: 12px 22px;
     border-radius: 999px;
     cursor: pointer;
     transition: transform 0.12s ease;
   }
-  .pill-btn:active { transform: scale(0.94); }
+  .pill-btn:active { transform: scale(0.95); }
 
   /* ---------- Heart confetti ---------- */
-
   #hearts { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 105; }
-  .heart {
-    position: absolute;
-    top: -60px;
-    animation-name: fall;
-    animation-timing-function: ease-in;
-    animation-iteration-count: infinite;
-  }
-  @keyframes fall {
-    to { transform: translateY(calc(100vh + 120px)); }
-  }
+  .heart { position: absolute; top: -60px; animation-name: fall; animation-timing-function: ease-in; animation-iteration-count: infinite; }
+  @keyframes fall { to { transform: translateY(calc(100vh + 120px)); } }
 
   @media (prefers-reduced-motion: reduce) {
     .heart { animation: none; display: none; }
@@ -365,10 +303,18 @@
 </head>
 <body>
 
+<nav class="nav">
+  <a class="logo" href="index.html" aria-label="Our Word Games home"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><g stroke="currentColor" stroke-width="3.6" stroke-linecap="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="4.2" y1="7.5" x2="19.8" y2="16.5"/><line x1="4.2" y1="16.5" x2="19.8" y2="7.5"/></g></svg></a>
+  <div class="tabs"><a href="index.html" aria-current="page">Our games</a><a href="parlour.html">Word Parlour</a></div>
+  <span class="spacer"></span>
+</nav>
+
+<div id="app">
+
 <!-- ============ HOME ============ -->
 <div id="home" class="screen active">
   <div class="home-title-block">
-    <div class="home-emoji">❤️</div>
+    <div class="home-emoji"><svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><path fill="currentColor" d="M12 21s-7.5-4.6-9.7-9.2C.8 8.6 2.6 4.5 6.4 4.1c2.1-.2 3.9.9 5.6 2.9 1.7-2 3.5-3.1 5.6-2.9 3.8.4 5.6 4.5 4.1 7.7C19.5 16.4 12 21 12 21z"/></svg></div>
     <h1>Our Word Games</h1>
     <div class="subtitle">A few little games, made for one very special person</div>
   </div>
@@ -443,6 +389,8 @@
     <div class="win-ps" id="win-ps"></div>
     <div class="win-buttons" id="win-buttons"></div>
   </div>
+</div>
+
 </div>
 
 <script>
@@ -548,6 +496,7 @@ cardsEl.appendChild(anaCard);
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+  document.body.classList.toggle("in-game", id !== "home");
 }
 
 function goHome() {
@@ -697,7 +646,7 @@ function drawGrid(w, h) {
   const ctx = gridCanvas.getContext("2d");
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = "rgba(238,223,168,0.7)";
+  ctx.strokeStyle = "#F1F1F0";
   ctx.lineWidth = 1;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath(); ctx.moveTo(c * cell + 0.5, 0); ctx.lineTo(c * cell + 0.5, h); ctx.stroke();
