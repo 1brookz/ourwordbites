@@ -155,7 +155,7 @@
     z-index: 1;
     will-change: transform;
   }
-  .tile.snap { transition: transform 0.18s ease; }
+  .tile.snap { transition: transform 0.22s cubic-bezier(.22,.9,.32,1); }
   .tile.dragging { z-index: 10; box-shadow: 0 10px 24px rgba(0,0,0,0.14); cursor: grabbing; }
   .tile span { display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--text); }
   .tile span + span { border-left: 1px solid var(--line); }
@@ -688,35 +688,46 @@ function positionTile(t, dx, dy) {
 /* ================= WordBites: dragging ================= */
 
 function attachDrag(t) {
-  let startX = 0, startY = 0, active = false;
+  let startX = 0, startY = 0, lastX = 0, lastY = 0, active = false, raf = 0;
 
   t.el.addEventListener("pointerdown", e => {
     e.preventDefault();
+    if (active) return;
     active = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    t.el.setPointerCapture(e.pointerId);
+    startX = lastX = e.clientX;
+    startY = lastY = e.clientY;
+    try { t.el.setPointerCapture(e.pointerId); } catch (err) {}
     t.el.classList.remove("snap");
     t.el.classList.add("dragging");
   });
 
   t.el.addEventListener("pointermove", e => {
     if (!active) return;
-    positionTile(t, e.clientX - startX, e.clientY - startY);
+    e.preventDefault();
+    lastX = e.clientX; lastY = e.clientY;
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (active) positionTile(t, lastX - startX, lastY - startY); });
   });
 
   const finish = e => {
     if (!active) return;
     active = false;
+    cancelAnimationFrame(raf); raf = 0;
     t.el.classList.remove("dragging");
+    // a cancelled touch reports unreliable coordinates, so keep the last real finger position
+    if (e.type === "pointerup") { lastX = e.clientX; lastY = e.clientY; }
 
-    const dCols = Math.round((e.clientX - startX) / cell);
-    const dRows = Math.round((e.clientY - startY) / cell);
-    const target = { row: t.row + dRows, col: t.col + dCols };
-
-    if (isLegalMove(t, target)) {
-      t.row = target.row;
-      t.col = target.col;
+    const fc = t.col + (lastX - startX) / cell, fr = t.row + (lastY - startY) / cell;
+    let best = null, bd = Infinity;
+    for (let r = Math.round(fr) - 1; r <= Math.round(fr) + 1; r++) {
+      for (let c = Math.round(fc) - 1; c <= Math.round(fc) + 1; c++) {
+        if (!isLegalMove(t, { row: r, col: c })) continue;
+        const dd = (r - fr) ** 2 + (c - fc) ** 2;
+        if (dd < bd) { bd = dd; best = { row: r, col: c }; }
+      }
+    }
+    if (best && bd <= 1.3) {
+      t.row = best.row;
+      t.col = best.col;
     }
     t.el.classList.add("snap");
     positionTile(t);
@@ -725,6 +736,7 @@ function attachDrag(t) {
 
   t.el.addEventListener("pointerup", finish);
   t.el.addEventListener("pointercancel", finish);
+  t.el.addEventListener("lostpointercapture", finish);
 }
 
 function isLegalMove(tile, target) {
@@ -1018,6 +1030,11 @@ function spawnHearts() {
 }
 
 /* ================= Resize handling ================= */
+
+board.addEventListener("touchstart", e => e.preventDefault(), { passive: false });
+board.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+document.addEventListener("contextmenu", e => e.preventDefault());
+document.addEventListener("selectstart", e => e.preventDefault());
 
 let resizeTimer = null;
 window.addEventListener("resize", () => {

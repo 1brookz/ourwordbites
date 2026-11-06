@@ -26,7 +26,7 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text)}
-body{min-height:100vh;min-height:100dvh;font-family:var(--font);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;min-height:100vh;min-height:100dvh;font-family:var(--font);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--good);outline-offset:2px}
@@ -91,6 +91,8 @@ h2{font-weight:700;font-size:19px;margin:0;letter-spacing:-.02em;text-wrap:balan
 .sc small{color:var(--muted);font-size:12px}
 .rivals{display:flex;gap:6px;flex-wrap:wrap}
 .rivals span{display:flex;align-items:center;gap:6px;font-size:13px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-variant-numeric:tabular-nums}
+input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+body:not([data-screen="home"]){--muted:#5C4F3C}
 .say{height:26px;text-align:center;font-weight:800;font-size:17px;transition:opacity .2s}
 .say.good{color:var(--good)} .say.warn{color:var(--warn)} .say.bad{color:var(--bad)}
 .foot{display:flex;gap:8px}
@@ -113,7 +115,7 @@ h2{font-weight:700;font-size:19px;margin:0;letter-spacing:-.02em;text-wrap:balan
 
 .bites{position:relative;margin:0 auto;touch-action:none;border-radius:14px;background-color:var(--surface);border:1px solid var(--line);
   background-image:linear-gradient(var(--soft) 1px,transparent 1px),linear-gradient(90deg,var(--soft) 1px,transparent 1px);background-size:var(--cs) var(--cs)}
-.piece{position:absolute;display:flex;padding:3px;touch-action:none;cursor:grab;z-index:1}
+.piece{position:absolute;display:flex;padding:3px;touch-action:none;cursor:grab;z-index:1;will-change:transform;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .piece.v{flex-direction:column}
 .piece .in{flex:1;display:flex;border-radius:9px;background:var(--tile);border:1.5px solid var(--tile-line)}
 .piece.v .in{flex-direction:column}
@@ -129,6 +131,20 @@ h2{font-weight:700;font-size:19px;margin:0;letter-spacing:-.02em;text-wrap:balan
 .board b{margin-left:auto;font-size:18px}
 .words{display:flex;flex-direction:column;gap:12px}
 .grp{display:flex;flex-direction:column;gap:6px}
+details.grp>summary,details.wpanel>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:2px 0}
+details>summary::-webkit-details-marker{display:none}
+details.grp>summary::after,details.wpanel>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);margin-left:auto;margin-right:4px;transition:transform .15s}
+details[open].grp>summary::after,details[open].wpanel>summary::after{transform:rotate(45deg)}
+details.grp>summary .of{color:var(--text);text-transform:none;letter-spacing:0;font-weight:600}
+details.grp{border-top:1px solid var(--line);padding-top:8px}
+details.grp:first-child{border-top:0;padding-top:0}
+details.grp[open]>.chips{margin-top:4px}
+details.wpanel{display:block}
+details.wpanel>summary h2{flex:none}
+.wbody{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.wn{font-size:12px;font-weight:700;background:var(--soft);color:var(--text);border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.outcome{font-weight:700;font-size:15px;margin:0}
+.hint{margin:0 auto 10px;text-align:center;font-size:13px;font-weight:600;line-height:1.4;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:7px 12px;max-width:340px}
 .chips{display:flex;flex-wrap:wrap;gap:5px}
 .chips span{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em;background:var(--bg);color:var(--muted);border:1px solid transparent}
 .chips span.me{background:var(--good);color:#fff}
@@ -136,7 +152,7 @@ h2{font-weight:700;font-size:19px;margin:0;letter-spacing:-.02em;text-wrap:balan
 .chips span.me.them{box-shadow:0 0 0 1.5px var(--text)}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .legend span{display:flex;align-items:center;gap:5px}
-.legend i{width:12px;height:12px;border-radius:4px;display:inline-block;background:var(--bg)}
+.legend i{width:12px;height:12px;border-radius:4px;display:inline-block;background:var(--bg);border:1px solid var(--line)}
 .sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center}
 .count{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(251,245,232,.92);font-weight:800;font-size:120px;color:var(--text);letter-spacing:-.05em}
 .loading{text-align:center;padding:40px 0;color:var(--muted)}
@@ -383,6 +399,7 @@ const S = {
   screen: "home", nick: store.get("wp.nick", ""), color: store.get("wp.color", Math.floor(Math.random() * COLORS.length)),
   opts: store.get("wp.opts", { an: { size: 6, time: 60 }, hunt: { size: 4, time: 80 }, bites: { time: 80 } }),
   roomApi: null, roomState: "loading", room: null, code: null, joinAt: 0, seen: new Set(), lastStarted: 0, invite: null,
+  wins: 0, tallied: new Set(), resUI: null,
 };
 let G = null, timer = null;
 const main = $("#main");
@@ -409,13 +426,36 @@ async function joinRoom(code, quiet) {
   try {
     const room = await S.roomApi.join("wp-" + code);
     S.room = room; S.code = code; S.joinAt = Date.now(); S.roomState = "ready"; store.set("wp.code", code);
-    room.presence({ nick: myName(), c: S.color, st: "lobby" }).catch(() => {});
+    S.wins = loadWins(code); S.tallied = new Set();
+    room.presence({ nick: myName(), c: S.color, st: "lobby", wins: S.wins }).catch(() => {});
     room.onPeers(onPeers, () => { S.room = null; S.code = null; if (S.screen === "home") render(); });
   } catch (e) { S.roomState = "ready"; if (!quiet) S.roomErr = "Couldn't join that room. Check the code and try again."; }
   if (S.screen === "home") render();
 }
 async function leaveRoom(silent) { const r = S.room; S.room = null; S.code = null; store.set("wp.code", null); try { await r?.leave(); } catch {} if (!silent && S.screen === "home") render(); }
+function winsKey(code) { return "wp.wins." + code; }
+function loadWins(code) { try { return Number(sessionStorage.getItem(winsKey(code))) || 0; } catch { return 0; } }
+function saveWins() { try { if (S.code) sessionStorage.setItem(winsKey(S.code), String(S.wins)); } catch {} }
+const winsTxt = n => `${n | 0} win${(n | 0) === 1 ? "" : "s"}`;
+// how this round went against everyone else in the room who played the same board
+function roundOutcome(g) {
+  if (!S.room || !g || !g.over) return null;
+  const ps = others();
+  if (ps.some(p => p.presence?.gid === g.id && p.presence?.st === "play")) return { pending: true };
+  const rivals = ps.filter(p => p.presence?.last?.gid === g.id).map(p => ({ nick: p.presence.nick || "Player", sc: Number(p.presence.last.sc) || 0 }));
+  if (!rivals.length) return null;
+  const top = Math.max(...rivals.map(r => r.sc));
+  const result = g.score > top ? "win" : g.score === top ? "draw" : "loss";
+  return { pending: false, result, winner: result === "loss" ? rivals.find(r => r.sc === top).nick : null };
+}
+function tryTally() {
+  if (!G || !G.over || S.tallied.has(G.id)) return;
+  const o = roundOutcome(G); if (!o || o.pending) return;
+  S.tallied.add(G.id);
+  if (o.result === "win") { S.wins++; saveWins(); pres({ wins: S.wins }); }
+}
 function onPeers() {
+  tryTally();
   // a friend may have started a round: the newest proposal wins
   let newest = null;
   for (const p of S.room ? S.room.peers() : []) { const g = p.presence?.g; if (g && typeof g.id === "number" && g.t in NAMES && (!newest || g.id > newest.g.id)) newest = { g, who: p.presence.nick, mine: p.sameTab }; }
@@ -508,7 +548,8 @@ function renderRoom() {
   el.innerHTML = `<div class="row"><div class="grow"><div class="lbl">Room code</div><div class="code">${esc(S.code.toUpperCase())}</div></div>
       <button class="btn ghost" id="cp">Copy code</button><button class="btn ghost" id="lv">Leave</button></div>
     ${inv}
-    <ul class="people">${list.map(p => `<li><span class="dot" style="background:${COLORS[(p.presence?.c | 0) % COLORS.length]}"></span><span>${esc(p.presence?.nick || "Player")}</span>${p.sameTab ? '<span class="you">you</span>' : ""}<span class="st">${peerStatus(p)}</span></li>`).join("")}</ul>
+    <div class="lbl">Players · wins this session</div>
+    <ul class="people">${list.map(p => `<li><span class="dot" style="background:${COLORS[(p.presence?.c | 0) % COLORS.length]}"></span><span>${esc(p.presence?.nick || "Player")}</span>${p.sameTab ? '<span class="you">you</span>' : ""}<span class="st">${peerStatus(p)}</span><span class="wn">${winsTxt(p.sameTab ? S.wins : p.presence?.wins)}</span></li>`).join("")}</ul>
     ${list.length < 2 ? `<p class="muted" style="margin:0;font-size:13px">Waiting for your friend. They open Word Parlour on the site and enter <b>${esc(S.code.toUpperCase())}</b>.</p>` : `<p class="muted" style="margin:0;font-size:13px">Pick a game below. Whoever starts it starts it for everyone here.</p>`}`;
   $("#lv").onclick = () => leaveRoom();
   $("#cp").onclick = e => { const b = e.currentTarget; navigator.clipboard?.writeText(S.code.toUpperCase()).then(() => b.textContent = "Copied", () => b.textContent = S.code.toUpperCase()).catch(() => {}); };
@@ -568,8 +609,9 @@ function finish() {
   if (!G || G.over) return;
   G.over = true; stopTimer(); clearTimeout(presT);
   let w = ""; for (const x of G.found) { if (w.length + x.length + 1 > 2400) break; w += (w ? "," : "") + x; }
-  pres({ st: "done", sc: G.score, n: G.found.length, w });
+  pres({ st: "done", sc: G.score, n: G.found.length, w, last: { gid: G.id, sc: G.score } });
   $(".sheet")?.remove();
+  tryTally();
   S.screen = "results"; document.body.dataset.screen = "results"; renderResults();
 }
 
@@ -601,10 +643,13 @@ function renderInvite() {
     $("#inv2").onclick = () => { const g = S.invite.g; S.invite = null; startGame(g, false); };
   } else el.innerHTML = "";
 }
-function wordGroups(all, mine, theirs) {
+function wordGroups(all, mine, theirs, isOpen = () => true) {
   const groups = {};
   for (const w of all) (groups[w.length] ||= []).push(w);
-  return Object.keys(groups).sort((a, b) => b - a).map(len => `<div class="grp"><div class="lbl">${len} letters · ${groups[len].length}</div><div class="chips">${groups[len].map(w => `<span class="${mine.has(w) ? "me" : ""}${theirs.has(w) ? " them" : ""}">${w}</span>`).join("")}</div></div>`).join("");
+  return Object.keys(groups).sort((a, b) => b - a).map(len => {
+    const ws = groups[len], got = ws.filter(w => mine.has(w)).length;
+    return `<details class="grp" data-k="${len}"${isOpen(len) ? " open" : ""}><summary class="lbl">${len} letters <span class="of">· ${got} of ${ws.length} found</span></summary><div class="chips">${ws.map(w => `<span class="${mine.has(w) ? "me" : ""}${theirs.has(w) ? " them" : ""}">${w}</span>`).join("")}</div></details>`;
+  }).join("");
 }
 function openReveal() {
   const sh = document.createElement("div"); sh.className = "sheet";
@@ -689,25 +734,63 @@ function playBites() {
   const P = G.data.pieces;
   const cs = Math.floor(Math.min(main.clientWidth, 440) / BW);
   const ar = $("#arena");
-  ar.innerHTML = `<p class="muted" style="margin:0 0 10px;text-align:center;font-size:13px">Drag a block to an empty spot. A whole unbroken row or column that spells a word scores.</p><div class="bites" id="bites" style="--cs:${cs}px;width:${cs * BW + 2}px;height:${cs * BH + 2}px"></div>`;
+  ar.innerHTML = `<p class="hint">Drag a block to an empty spot. A whole unbroken row or column that spells a word scores.</p><div class="bites" id="bites" style="--cs:${cs}px;width:${cs * BW + 2}px;height:${cs * BH + 2}px"></div>`;
   const board = $("#bites");
   const pos = (el, p) => { el.style.left = p.x * cs + "px"; el.style.top = p.y * cs + "px"; el.style.width = (p.k === "h" ? 2 : 1) * cs + "px"; el.style.height = (p.k === "v" ? 2 : 1) * cs + "px"; };
   const grid = () => { const g = Array.from({ length: BH }, () => Array(BW).fill(null)); for (const p of P) for (const [x, y, ch] of cellsOf(p)) g[y][x] = { ch, p }; return g; };
   const canPlace = (p, x, y) => cellsOf({ ...p, x, y }).every(([cx, cy]) => cx >= 0 && cy >= 0 && cx < BW && cy < BH && !P.some(q => q !== p && cellsOf(q).some(([qx, qy]) => qx === cx && qy === cy)));
+  // the closest empty spot to where the block was let go; a near miss still lands
+  const nearestFree = (p, fx, fy) => {
+    let best = null, bd = Infinity;
+    for (let y = Math.round(fy) - 1; y <= Math.round(fy) + 1; y++) for (let x = Math.round(fx) - 1; x <= Math.round(fx) + 1; x++) {
+      if (!canPlace(p, x, y)) continue;
+      const dd = (x - fx) ** 2 + (y - fy) ** 2;
+      if (dd < bd) { bd = dd; best = { x, y }; }
+    }
+    return bd <= 1.3 ? best : null;
+  };
+  // stop the page from scrolling or selecting while a finger is on the board
+  board.addEventListener("touchstart", e => e.preventDefault(), { passive: false });
+  board.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
   const els = new Map();
   for (const p of P) {
     const el = document.createElement("div"); el.className = "piece " + p.k;
     el.innerHTML = `<div class="in">${p.l.map(c => `<span>${c}</span>`).join("")}</div>`;
     pos(el, p); board.appendChild(el); els.set(p, el);
     let d = null;
-    el.addEventListener("pointerdown", e => { if (G.over) return; e.preventDefault(); el.setPointerCapture(e.pointerId); d = { sx: e.clientX, sy: e.clientY }; el.classList.add("lift"); });
-    el.addEventListener("pointermove", e => { if (d) el.style.transform = `translate(${e.clientX - d.sx}px,${e.clientY - d.sy}px)`; });
+    el.addEventListener("pointerdown", e => {
+      if (G.over || d) return; e.preventDefault();
+      try { el.setPointerCapture(e.pointerId); } catch {}
+      el.style.transition = "none";
+      d = { id: e.pointerId, sx: e.clientX, sy: e.clientY, lx: e.clientX, ly: e.clientY, raf: 0 };
+      el.classList.add("lift");
+    });
+    el.addEventListener("pointermove", e => {
+      if (!d || e.pointerId !== d.id) return; e.preventDefault();
+      d.lx = e.clientX; d.ly = e.clientY;
+      if (!d.raf) d.raf = requestAnimationFrame(() => { if (!d) return; d.raf = 0; el.style.transform = `translate3d(${d.lx - d.sx}px,${d.ly - d.sy}px,0)`; });
+    });
     const drop = e => {
-      if (!d) return; const nx = p.x + Math.round((e.clientX - d.sx) / cs), ny = p.y + Math.round((e.clientY - d.sy) / cs); d = null;
-      el.style.transform = ""; el.classList.remove("lift");
-      if ((nx !== p.x || ny !== p.y) && canPlace(p, nx, ny)) { p.x = nx; p.y = ny; pos(el, p); scan(p); }
+      if (!d || (e.pointerId != null && e.pointerId !== d.id)) return;
+      // a cancelled touch reports unreliable coordinates, so keep the last real finger position
+      if (e.type === "pointerup") { d.lx = e.clientX; d.ly = e.clientY; }
+      cancelAnimationFrame(d.raf);
+      const dx = d.lx - d.sx, dy = d.ly - d.sy; d = null;
+      el.classList.remove("lift");
+      const spot = nearestFree(p, p.x + dx / cs, p.y + dy / cs);
+      const moved = !!spot && (spot.x !== p.x || spot.y !== p.y);
+      const ox = dx - (moved ? (spot.x - p.x) * cs : 0), oy = dy - (moved ? (spot.y - p.y) * cs : 0);
+      if (moved) { p.x = spot.x; p.y = spot.y; pos(el, p); }
+      // glide from where the finger let go into the cell
+      el.style.transition = "none";
+      el.style.transform = `translate3d(${ox}px,${oy}px,0)`;
+      void el.offsetWidth;
+      el.style.transition = "transform .22s cubic-bezier(.22,.9,.32,1)";
+      el.style.transform = "translate3d(0,0,0)";
+      if (moved) scan(p);
     };
     el.addEventListener("pointerup", drop); el.addEventListener("pointercancel", drop);
+    el.addEventListener("lostpointercapture", drop);
   }
   function scan(p) {
     const g = grid(), hits = [];
@@ -731,8 +814,15 @@ function playBites() {
 // ---------- results ----------
 function renderResults(live) {
   if (!G) return renderHome();
-  const rs = others().filter(p => p.presence?.gid === G.id);
-  const rows = [{ nick: myName(), c: S.color, sc: G.score, n: G.found.length, me: true, done: true }, ...rs.map(p => ({ nick: p.presence.nick || "Player", c: p.presence.c, sc: p.presence.sc || 0, n: p.presence.n || 0, done: p.presence.st === "done" }))].sort((a, b) => b.sc - a.sc);
+  const rs = others().filter(p => p.presence?.gid === G.id || p.presence?.last?.gid === G.id);
+  const rows = [{ nick: myName(), c: S.color, sc: G.score, n: G.found.length, me: true, done: true, wins: S.wins }, ...rs.map(p => { const fin = p.presence.last?.gid === G.id; return { nick: p.presence.nick || "Player", c: p.presence.c, sc: fin ? Number(p.presence.last.sc) || 0 : p.presence.sc || 0, n: p.presence.n || 0, done: fin, wins: p.presence.wins }; })].sort((a, b) => b.sc - a.sc);
+  const oc = roundOutcome(G);
+  const ocTxt = !oc ? "" : oc.pending ? "Waiting for everyone to finish…" : oc.result === "win" ? "You won this round" : oc.result === "draw" ? "It's a draw" : `${esc(oc.winner)} won this round`;
+  // keep whatever the viewer opened or closed when the page refreshes with live scores
+  if (live && S.resUI && S.resUI.id === G.id) { const wp = $("#wp"); if (wp) { S.resUI.panel = wp.open; S.resUI.groups = {}; main.querySelectorAll("details.grp").forEach(d => S.resUI.groups[d.dataset.k] = d.open); } }
+  if (!S.resUI || S.resUI.id !== G.id) S.resUI = { id: G.id, panel: true, groups: {} };
+  const defOpen = G.type !== "bites";
+  const isOpen = k => (k in S.resUI.groups) ? S.resUI.groups[k] : defOpen;
   const theirs = new Set(rs.flatMap(p => String(p.presence.w || "").split(",").filter(Boolean)));
   const all = [...new Set([...G.all, ...G.found, ...theirs])].sort(byLen);
   const best = G.found.slice().sort(byLen)[0];
@@ -742,14 +832,17 @@ function renderResults(live) {
       <div class="lbl">${esc(NAMES[G.type])} · round over</div>
       <div class="big">${fmt(G.score)}</div>
       <p class="muted" style="margin:0">${G.found.length} of ${G.all.length} words${best ? ` · best: <b style="color:var(--text);text-transform:uppercase">${esc(best)}</b>` : ""}</p>
-      ${rows.length > 1 ? `<ul class="board">${rows.map((r, i) => `<li class="${i === 0 && allDone ? "win" : ""}"><span class="dot" style="background:${COLORS[(r.c | 0) % COLORS.length]}"></span><span>${esc(r.nick)}</span>${r.me ? '<span class="you">you</span>' : ""}<span class="muted" style="font-size:13px">${r.n} words${r.done ? "" : " · still playing"}</span><b>${fmt(r.sc)}</b></li>`).join("")}</ul>` : ""}
+      ${ocTxt ? `<p class="outcome">${ocTxt}</p>` : ""}
+      ${rows.length > 1 ? `<ul class="board">${rows.map((r, i) => `<li class="${i === 0 && allDone && rows[1].sc !== r.sc ? "win" : ""}"><span class="dot" style="background:${COLORS[(r.c | 0) % COLORS.length]}"></span><span>${esc(r.nick)}</span>${r.me ? '<span class="you">you</span>' : ""}<span class="muted" style="font-size:13px">${r.n} words${r.done ? "" : " · still playing"}</span><span class="wn" style="margin-left:auto">${winsTxt(r.wins)}</span><b style="margin-left:0">${fmt(r.sc)}</b></li>`).join("")}</ul>` : ""}
       <div class="row"><button class="btn primary grow" id="again">${S.room ? "Play again (everyone)" : "Play again"}</button><button class="btn ghost" id="home">All games</button></div>
     </section>
-    <section class="panel">
-      <h2>Every word on this board</h2>
-      <div class="legend"><span><i style="background:var(--good)"></i>You found</span>${rs.length ? `<span><i style="border:1px solid var(--accent)"></i>Friend found</span>` : ""}<span><i></i>Missed</span></div>
-      <div class="words">${wordGroups(all, G.set, theirs)}</div>
-    </section></div>`;
+    <details class="panel wpanel" id="wp"${S.resUI.panel ? " open" : ""}>
+      <summary><h2>Every word on this board</h2><span class="muted">${fmt(all.length)}</span></summary>
+      <div class="wbody">
+        <div class="legend"><span><i style="background:var(--good);border-color:var(--good)"></i>You found</span>${rs.length ? `<span><i style="border:1.5px solid var(--text)"></i>Friend found</span>` : ""}<span><i></i>Missed</span></div>
+        <div class="words">${wordGroups(all, G.set, theirs, isOpen)}</div>
+      </div>
+    </details></div>`;
   if (live && S.screen === "results") { const y = window.scrollY; main.innerHTML = html; window.scrollTo(0, y); } else { main.innerHTML = html; window.scrollTo(0, 0); }
   $("#again").onclick = () => propose(G.type);
   $("#home").onclick = () => { pres({ st: "lobby" }); renderHome(); };
@@ -761,6 +854,9 @@ function renderResults(live) {
 }
 
 // ---------- boot ----------
+const editable = t => t && t.closest && t.closest("input,textarea");
+document.addEventListener("contextmenu", e => { if (!editable(e.target)) e.preventDefault(); });
+document.addEventListener("selectstart", e => { if (!editable(e.target)) e.preventDefault(); });
 renderHome();
 loadDict().catch(() => { main.insertAdjacentHTML("afterbegin", `<div class="note" style="color:var(--bad)">The word list didn't load. Reload the page to try again.</div>`); });
 store.set("wp.color", S.color);
