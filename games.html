@@ -163,6 +163,8 @@ details.wpanel>summary h2{flex:none}
 [hidden]{display:none!important}
 body:not([data-screen="home"]) .hero{display:none}
 
+@media (max-width:460px){.nav{gap:8px}.nav .spacer{display:none}.tabs{gap:2px}.tabs a{padding:6px 9px;font-size:13px}}
+
 body:not([data-screen="home"]) .hero{display:none}
 
 /* ---------- Normal Games / Ludo ---------- */
@@ -228,6 +230,16 @@ body:not([data-screen="home"]) .hero{display:none}
 @media (prefers-reduced-motion:reduce){.pc.can,.dicebtn.go{animation:none}.die{transition-duration:.2s}}
 
 @media (max-width:460px){.nav{gap:8px}.nav .spacer{display:none}.tabs{gap:2px}.tabs a{padding:6px 9px;font-size:13px}}
+
+.pc.kick::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2.5px solid var(--bad);animation:kick .9s ease-in-out infinite}
+@keyframes kick{50%{transform:scale(1.12);opacity:.6}}
+.dirs{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 14px}
+.dirseg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dirseg button{border:1.5px solid var(--line);background:var(--surface);color:var(--text);border-radius:14px;padding:12px 10px;font-weight:700;font-size:14px;min-height:48px}
+.dirseg button[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.dirseg button[data-d="b"][aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--surface)}
+.dirseg button[disabled]{opacity:.45}
+@media (prefers-reduced-motion:reduce){.pc.kick::before{animation:none}}
 </style>
 </head>
 <body data-screen="home">
@@ -379,11 +391,14 @@ const LUDO = (() => {
   const key = (r, c) => r * N + c;
   const trackIdx = new Map(TRACK.map(([r, c], i) => [key(r, c), i]));
   const laneCells = new Set(LANE.flat().map(([r, c]) => key(r, c)));
-  // "directly opposite": the track square straight across a home lane, two cells away
+  // "directly opposite": the square straight across an arm, two cells away, with the coloured home lane
+  // (or, at the outer end of the arm, the middle tip square) in between
+  const tipMid = new Set([key(7, 0), key(0, 7), key(7, 14), key(14, 7)]);
   const OPP = new Array(52).fill(-1);
   TRACK.forEach(([r, c], i) => {
     for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
-      if (laneCells.has(key(r + dr, c + dc)) && trackIdx.has(key(r + 2 * dr, c + 2 * dc))) OPP[i] = trackIdx.get(key(r + 2 * dr, c + 2 * dc));
+      const mid = key(r + dr, c + dc), far = key(r + 2 * dr, c + 2 * dc);
+      if ((laneCells.has(mid) || tipMid.has(mid)) && trackIdx.has(far)) OPP[i] = trackIdx.get(far);
     }
   });
   const SAFE = new Set(START);
@@ -533,7 +548,7 @@ function adopt(st, mine) {
   if (S.screen !== "game") { if (S.screen === "home") renderHome(); return; }
   const sameGame = prev && prev.gid === st.gid;
   if (sameGame && st.dice.n !== prev.dice.n) spinDie(st.dice.v, st.seats[st.turn].c);
-  if (!sameGame) { S.pick = null; buildBoard(); setDie(st.dice.v, st.seats[st.turn]?.c ?? 0, true); }
+  if (!sameGame) { buildBoard(); setDie(st.dice.v, st.seats[st.turn]?.c ?? 0, true); }
   const lm = st.last;
   if (sameGame && lm && lm.seq === st.seq && prev.seq === st.seq - 1) animateMove(prev, st, lm);
   else renderPieces(st.pieces);
@@ -552,6 +567,14 @@ function act(fn) {
 function nextTurn(st) { st.turn = (st.turn + 1) % st.seats.length; st.phase = "roll"; }
 const nameOf = (st, i) => st.seats[i]?.uid === S.uid ? "You" : (st.seats[i]?.nick || LNAME[st.seats[i]?.c] || "Player");
 const legal = st => st && st.phase === "move" ? L.moves(st.pieces, st.seats[st.turn].c, st.dice.v, st.mode === "afr") : [];
+// which way this roll is being played: forwards unless the player picks backwards (or forwards is impossible)
+function moveDir(can) {
+  if (S.dirRoll !== S.st.gid + ":" + S.st.dice.n) { S.dirRoll = S.st.gid + ":" + S.st.dice.n; S.dir = null; }
+  const f = can.some(m => m.dir > 0), b = can.some(m => m.dir < 0);
+  if (S.dir === "b" && b) return "b";
+  if (S.dir === "f" && f) return "f";
+  return f ? "f" : "b";
+}
 
 function startGame() {
   const ppl = [{ uid: S.uid, nick: myName() }];
@@ -586,7 +609,7 @@ function scheduleAutoPass() {
 }
 function doMove(m) {
   if (!myTurn() || S.st.phase !== "move") return;
-  S.pick = null;
+ 
   act(st => {
     const seat = st.seats[st.turn], c = seat.c, v = st.dice.v;
     st.pieces = L.apply(st.pieces, c, m);
@@ -687,7 +710,7 @@ function renderRoom() {
 let CS = 24;
 function openGame() {
   if (!S.st) return;
-  S.screen = "game"; document.body.dataset.screen = "game"; S.pick = null;
+  S.screen = "game"; document.body.dataset.screen = "game";
   pres({ st: "ludo", at: S.st.gid });
   window.scrollTo(0, 0);
   main.innerHTML = `<div style="display:flex;flex-direction:column;gap:14px">
@@ -700,6 +723,7 @@ function openGame() {
       <button class="dicebtn" id="dice" aria-label="Roll the dice"><div class="die" id="die">${[1, 2, 3, 4, 5, 6].map(n => `<div class="face f${n}">${pips(n)}</div>`).join("")}</div></button>
       <div class="msg"><b id="msg"></b><span id="sub"></span></div>
     </div>
+    <div class="dirs" id="dirs" hidden></div>
     <div id="endp"></div>
   </div>`;
   $("#back").onclick = goHome;
@@ -747,7 +771,6 @@ function buildBoard() {
   h += `<svg class="ctr" viewBox="0 0 3 3" aria-hidden="true"><path d="M0 0L1.5 1.5L0 3Z" fill="var(--l0)"/><path d="M0 0L3 0L1.5 1.5Z" fill="var(--l1)"/><path d="M3 0L3 3L1.5 1.5Z" fill="var(--l2)"/><path d="M0 3L3 3L1.5 1.5Z" fill="var(--l3)"/></svg>`;
   h += `<div id="pcs"></div><div id="tgs"></div>`;
   bin.innerHTML = h;
-  bin.onclick = e => { if (!e.target.closest(".pc,.tg") && S.pick != null) { S.pick = null; renderPieces(S.st.pieces); } };
 }
 // where a piece sits, in pixels
 const YSPOT = [[2, 2], [2, 4], [4, 2], [4, 4]], YORG = [[0, 0], [0, 9], [9, 9], [9, 0]];
@@ -763,15 +786,18 @@ function renderPieces(pieces, override) {
   const st = S.st, list = [];
   pieces.forEach((arr, c) => arr && arr.forEach((p, i) => { const pp = override && override.c === c && override.i === i ? override.p : p; list.push({ c, i, p: pp, at: cellOf(c, i, pp) }); }));
   const groups = {}; list.forEach(x => (groups[x.at.key] ||= []).push(x));
-  const can = !S.anim && !override && myTurn() && st.phase === "move" ? legal(st) : [];
+  const all = !S.anim && !override && myTurn() && st.phase === "move" ? legal(st) : [];
+  const dir = all.length ? moveDir(all) : "f";
+  const can = all.filter(m => (m.dir < 0) === (dir === "b"));
   const movable = new Set(can.map(m => m.i)), myC = st.seats[st.turn].c;
+  const victims = new Set(can.flatMap(m => m.caps.map(k => k.c + "-" + k.i)));
   const OFF = [[-.2, -.2], [.2, .2], [.2, -.2], [-.2, .2]];
   let h = "";
   for (const x of list) {
     const g = groups[x.at.key], k = g.indexOf(x), stacked = g.length > 1 && !x.at.home;
     const dx = stacked ? OFF[k % 4][0] * CS : 0, dy = stacked ? OFF[k % 4][1] * CS : 0;
     const isCan = x.c === myC && movable.has(x.i);
-    const cls = ["pc", stacked || x.at.home ? "small" : "", isCan ? "can" : "", isCan && S.pick === x.i ? "sel" : ""].join(" ");
+    const cls = ["pc", stacked || x.at.home ? "small" : "", isCan ? "can" : "", victims.has(x.c + "-" + x.i) ? "kick" : ""].join(" ");
     h += `<button type="button" class="${cls}" data-c="${x.c}" data-i="${x.i}" ${isCan ? "" : 'tabindex="-1"'} aria-label="${LNAME[x.c]} piece ${x.i + 1}" style="--pc:${LC[x.c]};transform:translate(${x.at.x + dx}px,${x.at.y + dy}px)"></button>`;
   }
   // keep existing buttons so pieces glide instead of jumping
@@ -785,18 +811,28 @@ function renderPieces(pieces, override) {
   old.forEach(el => el.remove());
   host.onclick = e => {
     const b = e.target.closest(".pc.can"); if (!b) return;
-    const i = +b.dataset.i, opts = can.filter(m => m.i === i);
-    if (opts.length === 1) return doMove(opts[0]);
-    S.pick = S.pick === i ? null : i; renderPieces(S.st.pieces);
+    const m = can.find(x => x.i === +b.dataset.i); if (m) doMove(m);
   };
-  // destination markers when a piece has a forwards and a backwards option
+  // where each kicking move lands, so captures are easy to spot
   let t = "";
-  if (S.pick != null) for (const m of can.filter(m => m.i === S.pick)) {
+  for (const m of can) if (m.caps.length) {
     const at = cellOf(myC, m.i, m.to);
-    t += `<button type="button" class="tg${m.caps.length ? " cap" : ""}" data-to="${m.to}" style="left:${at.x - CS / 2}px;top:${at.y - CS / 2}px" aria-label="${m.dir < 0 ? "Move back" : "Move forward"}${m.caps.length ? " and capture" : ""}">${m.dir < 0 ? "←" : "→"}</button>`;
+    t += `<button type="button" class="tg cap" data-i="${m.i}" style="left:${at.x - CS / 2}px;top:${at.y - CS / 2}px" aria-label="${m.dir < 0 ? "Move back" : "Move forward"} and capture">${m.dir < 0 ? "←" : "→"}</button>`;
   }
   tgs.innerHTML = t;
-  tgs.onclick = e => { const b = e.target.closest(".tg"); if (!b) return; const m = can.find(x => x.i === S.pick && x.to === +b.dataset.to); if (m) doMove(m); };
+  tgs.onclick = e => { const b = e.target.closest(".tg"); if (!b) return; const m = can.find(x => x.i === +b.dataset.i); if (m) doMove(m); };
+  renderDirs(all, dir);
+}
+function renderDirs(all, dir) {
+  const el = $("#dirs"); if (!el) return;
+  const f = all.filter(m => m.dir > 0), b = all.filter(m => m.dir < 0);
+  if (!b.length) { el.innerHTML = ""; el.hidden = true; return; }
+  const kicks = arr => arr.filter(m => m.caps.length).length;
+  el.hidden = false;
+  el.innerHTML = `<div class="lbl">Move this roll</div><div class="dirseg">
+    <button type="button" data-d="f" aria-pressed="${dir === "f"}"${f.length ? "" : " disabled"}>→ Forwards${f.length ? (kicks(f) ? ` · ${kicks(f)} kick${kicks(f) > 1 ? "s" : ""}` : "") : " · no moves"}</button>
+    <button type="button" data-d="b" aria-pressed="${dir === "b"}">← Backwards · ${b.length} kick${b.length > 1 ? "s" : ""}</button></div>`;
+  el.onclick = e => { const x = e.target.closest("[data-d]"); if (!x || x.disabled) return; S.dir = x.dataset.d; renderPieces(S.st.pieces); renderCtrl(); };
 }
 function animateMove(prev, st, lm) {
   const steps = L.path(lm);
@@ -823,7 +859,12 @@ function renderCtrl() {
   else if (st.phase === "roll") { m = mine ? "Your turn. Tap the dice." : `${who.nick}'s turn`; }
   else {
     const n = legal(st).length;
-    if (mine) { m = n ? `You rolled ${st.dice.v}. Pick a piece.` : `No move with a ${st.dice.v}`; if (n && afr && legal(st).some(x => x.dir < 0)) s = "A backwards capture is possible. Tap the piece to choose a direction."; }
+    if (mine) {
+      const all = legal(st), back = all.some(x => x.dir < 0);
+      m = n ? `You rolled ${st.dice.v}. ${back ? "Pick a direction, then a piece." : "Pick a piece."}` : `No move with a ${st.dice.v}`;
+      if (n && back) s = moveDir(all) === "b" ? "Backwards: tap a glowing piece or a ← square to kick." : "You can kick backwards. Tap ← Backwards below to see how.";
+      else if (n && all.some(x => x.caps.length)) s = "Dark squares show where you'd kick an opponent.";
+    }
     else m = `${who.nick} rolled ${st.dice.v}`;
   }
   msg.textContent = m; sub.textContent = s;
