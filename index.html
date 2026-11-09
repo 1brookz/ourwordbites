@@ -432,16 +432,16 @@ const REVEAL_INTERVAL_MS = 30000; // one letter of every word revealed every 30s
 
 const ANAGRAM_LETTERS = "nhyira";  // the special word (shown scrambled)
 
-// All accepted English words buildable from N, H, Y, I, R, A (each letter used once).
+// Everyday English words buildable from N, H, Y, I, R, A (each letter used once).
+// Rare or specialist words (ani, rya, ayin, rani…) were removed so every word can be found.
 // Edit this list freely to add or remove words.
 const ANAGRAM_WORDS = [
   // 2 letters
-  "ah", "ai", "an", "ay", "ha", "hi", "in", "na", "ya",
+  "ah", "an", "ha", "hi", "in",
   // 3 letters
-  "ain", "air", "ani", "any", "hay", "hin", "nah", "nay",
-  "rah", "rai", "ran", "ray", "ria", "rin", "rya", "yah", "yar", "yin",
+  "air", "any", "hay", "nah", "nay", "ran", "ray", "yin",
   // 4 letters
-  "airy", "ayin", "hair", "nary", "rain", "rani", "yarn",
+  "airy", "hair", "nary", "rain", "yarn",
   // 5 letters
   "hairy", "rainy"
 ];

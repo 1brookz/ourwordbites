@@ -352,7 +352,7 @@ function buildHunt(seed, o) {
   }
   return best;
 }
-const BW = 8, BH = 9;
+const BW = 8, BH = 8;
 const BIGRAMS = "th he in er an re on at en nd ti es or te ed is it al ar st to nt ng se ha ou ea le ve co me de ri ro ic ne ra ce li ch ll be ma si om ur ca el ta la ns ge ly os no pe do su pa ac ot di ol tr sh pr pl ow ee oo ai ck".split(" ");
 const SINGLES = "eeeeeaaaaiiioootttnnnsssrrrlldcmpbghyfwk";
 const cellsOf = p => p.k === "s" ? [[p.x, p.y, p.l[0]]] : p.k === "h" ? [[p.x, p.y, p.l[0]], [p.x + 1, p.y, p.l[1]]] : [[p.x, p.y, p.l[0]], [p.x, p.y + 1, p.l[1]]];
