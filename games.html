@@ -365,7 +365,8 @@ body:not([data-screen="home"]) .hero{display:none}
 // Colours, clockwise from top-left: 0 red, 1 green, 2 yellow, 3 blue.
 // A piece's progress p: -1 in yard, 0..50 on the main track (relative to its own start),
 // 51 the square directly behind its start (only reached by an African-rules backwards kick),
-// 52..56 in its home lane, 57 finished. From 50 or 51 the next step forwards is the home lane.
+// 52..56 in its home lane, 57 finished. From 50 the next step is the home lane; from 51 the piece
+// carries on to its own start square and goes round the whole board again.
 const LUDO = (() => {
   const N = 15, START = [0, 13, 26, 39], HOME = 57, LAST_TRACK = 51, LANE0 = 52;
   // the 52-square main track as [row, col], starting on red's start square and running clockwise
@@ -424,7 +425,7 @@ const LUDO = (() => {
     return caps;
   }
   // one step forwards / backwards along a colour's route
-  const fwd = p => (p === 50 || p === 51) ? LANE0 : p + 1;
+  const fwd = p => p === 50 ? LANE0 : p === 51 ? 0 : p + 1;
   const back = p => p === 0 ? 51 : p - 1;   // behind the start wraps onto the end of the lap
   const onTrack = p => p >= 0 && p <= LAST_TRACK;
   // every legal move for colour c after rolling v; each move carries the squares it passes through
@@ -673,7 +674,7 @@ function renderLudoCard() {
 }
 function rulesList(mode) {
   const base = ["Roll a 6 to bring a piece out", "A 6 gives you another roll", "Land on a single opponent piece to send it home", "Two of your pieces on one square make a wall nobody can pass", "The four starting squares are the only safe squares", "You need the exact roll to reach the centre"];
-  const afr = ["Move a piece backwards only when that move captures, even back past your own start", "Kicking back past your start is a shortcut: those squares lead straight into your home lane", "Line capture: land straight across a coloured home lane, or across the end of an arm, from an opponent to capture it"];
+  const afr = ["Move a piece backwards only when that move captures, even back past your own start", "Kicking back past your start: the square right behind it carries on round the whole board; two or more squares behind it lead straight into your home lane", "Line capture: land straight across a coloured home lane, or across the end of an arm, from an opponent to capture it"];
   return (mode === "afr" ? [...base, ...afr] : base).map(x => `<li>${x}</li>`).join("");
 }
 function peerStatus(pr) {
@@ -884,7 +885,7 @@ function openRules() {
   const sh = document.createElement("div"); sh.className = "sheet";
   sh.innerHTML = `<div role="dialog" aria-label="Ludo rules"><div class="row"><h2 class="grow">Ludo rules</h2><button class="btn" id="cls">Close</button></div>
     <h3>Regular</h3><ul class="rules">${rulesList("reg")}</ul>
-    <h3>African rules adds</h3><ul class="rules"><li>On any roll you may move a piece backwards, but only if that move captures.</li><li>Direct capture: land on a single opponent piece.</li><li>Line capture: land on a square straight across a coloured home lane from a single opponent piece.</li><li>A backwards kick can take you back past your own starting square. The squares behind your start lead straight into your home lane, so it's a shortcut.</li></ul></div>`;
+    <h3>African rules adds</h3><ul class="rules"><li>On any roll you may move a piece backwards, but only if that move captures.</li><li>Direct capture: land on a single opponent piece.</li><li>Line capture: land on a square straight across a coloured home lane from a single opponent piece.</li><li>A backwards kick can take you back past your own starting square. Land on the square right behind your start and you carry on round the whole board again. Land two or more squares behind it and you're just before your home lane, a shortcut.</li></ul></div>`;
   document.body.appendChild(sh);
   sh.addEventListener("click", e => { if (e.target === sh || e.target.id === "cls") sh.remove(); });
 }
