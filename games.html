@@ -165,6 +165,20 @@ body:not([data-screen="home"]) .hero{display:none}
 
 @media (max-width:460px){.nav{gap:8px}.nav .spacer{display:none}.tabs{gap:2px}.tabs a{padding:6px 9px;font-size:13px}}
 
+/* emotes */
+.emobar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.emobar .lbl{margin-right:auto}
+.emobar button{width:46px;height:46px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:25px;line-height:1;padding:0;display:grid;place-items:center;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;transition:transform .1s}
+.emobar button:active{transform:scale(.88)}
+[data-ek]{position:relative}
+.emo{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);font-size:30px;line-height:1;padding:5px 7px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 16px rgba(42,33,24,.16);z-index:8;pointer-events:none;white-space:nowrap;transition:opacity .8s;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.emo.pop{animation:emopop .4s cubic-bezier(.2,1.5,.4,1)}
+@keyframes emopop{from{scale:.3;opacity:0}}
+.emo.out{opacity:0}
+li[data-ek] .emo{left:-4px;top:-14px;bottom:auto;transform:none;font-size:20px;padding:2px 4px;border-radius:12px}
+.rivals span[data-ek] .emo{font-size:24px}
+@media (prefers-reduced-motion:reduce){.emo.pop{animation:none}}
+
 body:not([data-screen="home"]) .hero{display:none}
 
 /* ---------- Normal Games / Ludo ---------- */
@@ -240,6 +254,20 @@ body:not([data-screen="home"]) .hero{display:none}
 .dirseg button[data-d="b"][aria-pressed="true"]{background:var(--text);border-color:var(--text);color:var(--surface)}
 .dirseg button[disabled]{opacity:.45}
 @media (prefers-reduced-motion:reduce){.pc.kick::before{animation:none}}
+
+/* emotes */
+.emobar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.emobar .lbl{margin-right:auto}
+.emobar button{width:46px;height:46px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:25px;line-height:1;padding:0;display:grid;place-items:center;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;transition:transform .1s}
+.emobar button:active{transform:scale(.88)}
+[data-ek]{position:relative}
+.emo{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);font-size:30px;line-height:1;padding:5px 7px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 16px rgba(42,33,24,.16);z-index:8;pointer-events:none;white-space:nowrap;transition:opacity .8s;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.emo.pop{animation:emopop .4s cubic-bezier(.2,1.5,.4,1)}
+@keyframes emopop{from{scale:.3;opacity:0}}
+.emo.out{opacity:0}
+li[data-ek] .emo{left:-4px;top:-14px;bottom:auto;transform:none;font-size:20px;padding:2px 4px;border-radius:12px}
+.rivals span[data-ek] .emo{font-size:24px}
+@media (prefers-reduced-motion:reduce){.emo.pop{animation:none}}
 </style>
 </head>
 <body data-screen="home">
@@ -463,6 +491,59 @@ const LUDO = (() => {
 })();
 </script>
 <script>
+// ---------- emotes: four reactions shared through room presence, shown for 20 seconds ----------
+const EMOTES = [["😄", "Happy"], ["🙂", "Smile"], ["😢", "Sad"], ["😐", "Neutral"]];
+const EMO = { seen: new Set(), live: new Map(), last: 0, ms: 20000 };
+const emoKey = p => p.sameTab ? "me" : (p.presence && typeof p.presence.uid === "string" ? "u:" + p.presence.uid : "p:" + p.peer);
+// pick up any new emote a friend has sent
+function emoIngest(peers) {
+  for (const p of peers || []) {
+    const m = p.presence && p.presence.emo;
+    if (!m || typeof m.id !== "string" || !EMOTES.some(x => x[0] === m.e)) continue;
+    const k = emoKey(p), tag = k + "|" + m.id;
+    if (EMO.seen.has(tag)) continue;
+    EMO.seen.add(tag);
+    if (p.sameTab) continue;
+    // an emote lasts 20 seconds from when it was sent, so one seen late (after switching tabs) shows only for what's left
+    const left = EMO.ms - Math.max(0, Date.now() - (Number(m.t) || 0));
+    if (left < 1000) continue;
+    emoShow(k, m.e, left);
+  }
+}
+function emoShow(k, e, ms = EMO.ms) {
+  EMO.live.set(k, { e, at: Date.now(), until: Date.now() + ms });
+  emoPaint();
+  setTimeout(emoPaint, ms + 50);
+}
+// draw (or fade) the bubble on every element tagged with a player's key
+function emoPaint() {
+  const now = Date.now();
+  document.querySelectorAll("[data-ek]").forEach(el => {
+    const v = EMO.live.get(el.dataset.ek), on = v && v.until > now;
+    let b = el.querySelector(":scope > .emo");
+    if (on) {
+      if (!b) { b = document.createElement("span"); b.className = "emo"; b.setAttribute("aria-hidden", "true"); el.appendChild(b); if (now - v.at < 400) b.classList.add("pop"); }
+      if (b.textContent !== v.e) { b.textContent = v.e; b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+      b.classList.remove("out");
+    } else if (b && !b.classList.contains("out")) { b.classList.add("out"); setTimeout(() => b.remove(), 900); }
+  });
+}
+function emoSend(e, send) {
+  if (Date.now() - EMO.last < 1200) return;
+  EMO.last = Date.now();
+  send({ emo: { e, id: Math.random().toString(36).slice(2, 10), t: Date.now() } });
+  emoShow("me", e);
+}
+// the row of four buttons
+function emoBar(id) {
+  return `<div class="emobar" id="${id}" role="group" aria-label="Send an emote"><span class="lbl">React</span>${EMOTES.map(([e, n]) => `<button type="button" data-emo="${e}" aria-label="${n}" title="${n}">${e}</button>`).join("")}</div>`;
+}
+function emoWire(root, send) {
+  if (!root) return;
+  root.querySelectorAll(".emobar").forEach(bar => bar.onclick = ev => { const b = ev.target.closest("[data-emo]"); if (b) emoSend(b.dataset.emo, send); });
+}
+</script>
+<script>
 (() => {
 "use strict";
 const L = LUDO;
@@ -533,6 +614,7 @@ function validState(s) {
   return Number.isInteger(s.turn) && s.turn >= 0 && s.turn < s.seats.length && ["roll", "move", "over"].includes(s.phase) && s.dice && Number.isInteger(s.dice.v);
 }
 function onPeers() {
+  emoIngest(allPeers());
   let best = null;
   for (const p of allPeers()) { const l = p.presence?.ludo; if (validState(l) && newer(l, best)) best = l; }
   if (best && newer(best, S.st)) adopt(best, false);
@@ -702,8 +784,9 @@ function renderRoom() {
   el.innerHTML = `<div class="row"><div class="grow"><div class="lbl">Room code</div><div class="code">${esc(S.code.toUpperCase())}</div></div>
       <button class="btn ghost" id="cp">Copy code</button><button class="btn ghost" id="lv">Leave</button></div>
     <div class="lbl">Players · wins this session</div>
-    <ul class="people">${list.map(p => `<li><span class="dot" style="background:${COLORS[(p.presence?.c | 0) % COLORS.length]}"></span><span>${esc(p.presence?.nick || "Player")}</span>${p.sameTab ? '<span class="you">you</span>' : ""}<span class="st">${peerStatus(p.presence || {})}</span><span class="wn">${winsTxt(p.sameTab ? S.wins : p.presence?.wins)}</span></li>`).join("")}</ul>
+    <ul class="people">${list.map(p => `<li data-ek="${emoKey(p)}"><span class="dot" style="background:${COLORS[(p.presence?.c | 0) % COLORS.length]}"></span><span>${esc(p.presence?.nick || "Player")}</span>${p.sameTab ? '<span class="you">you</span>' : ""}<span class="st">${peerStatus(p.presence || {})}</span><span class="wn">${winsTxt(p.sameTab ? S.wins : p.presence?.wins)}</span></li>`).join("")}</ul>
     ${list.length < 2 ? `<p class="muted" style="margin:0;font-size:13px">Waiting for friends. They open the site and enter <b>${esc(S.code.toUpperCase())}</b>.</p>` : ""}`;
+  el.insertAdjacentHTML("beforeend", emoBar("emoRoom")); emoWire(el, pres); emoPaint();
   $("#lv").onclick = () => leaveRoom();
   $("#cp").onclick = e => { const b = e.currentTarget; try { navigator.clipboard.writeText(S.code.toUpperCase()).then(() => b.textContent = "Copied", () => b.textContent = S.code.toUpperCase()); } catch { b.textContent = S.code.toUpperCase(); } };
 }
@@ -726,11 +809,13 @@ function openGame() {
       <div class="msg"><b id="msg"></b><span id="sub"></span></div>
     </div>
     <div class="dirs" id="dirs" hidden></div>
+    ${S.room ? `<div class="panel" style="padding:12px 14px">${emoBar("emoGame")}</div>` : ""}
     <div id="endp"></div>
   </div>`;
   $("#back").onclick = goHome;
   $("#help").onclick = openRules;
   $("#dice").onclick = doRoll;
+  emoWire(main, pres);
   buildBoard();
   setDie(S.st.dice.v, S.st.seats[S.st.turn].c, true);
   renderPieces(S.st.pieces); renderSeats(); renderCtrl(); scheduleAutoPass();
@@ -850,7 +935,8 @@ function animateMove(prev, st, lm) {
 function renderSeats() {
   const el = $("#seats"); if (!el || !S.st) return;
   const st = S.st, atTable = new Set(others().filter(p => p.presence?.at === st.gid).map(p => p.presence.uid)); atTable.add(S.uid);
-  el.innerHTML = st.seats.map((x, i) => `<span class="seat${i === st.turn && st.phase !== "over" ? " now" : ""}${atTable.has(x.uid) ? "" : " away"}"><i style="background:${LC[x.c]}"></i>${esc(x.uid === S.uid ? "You" : x.nick)}<small>${st.pieces[x.c].filter(p => p === L.HOME).length}/4</small></span>`).join("");
+  el.innerHTML = st.seats.map((x, i) => `<span data-ek="${x.uid === S.uid ? "me" : "u:" + x.uid}" class="seat${i === st.turn && st.phase !== "over" ? " now" : ""}${atTable.has(x.uid) ? "" : " away"}"><i style="background:${LC[x.c]}"></i>${esc(x.uid === S.uid ? "You" : x.nick)}<small>${st.pieces[x.c].filter(p => p === L.HOME).length}/4</small></span>`).join("");
+  emoPaint();
 }
 function renderCtrl() {
   const st = S.st, msg = $("#msg"), sub = $("#sub"), dice = $("#dice"); if (!msg || !st) return;

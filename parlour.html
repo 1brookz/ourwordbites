@@ -170,6 +170,20 @@ body[data-game="bites"]:not([data-screen="home"]){background-color:#FCE8EE;backg
 body:not([data-screen="home"]) .hero{display:none}
 
 @media (max-width:460px){.nav{gap:8px}.nav .spacer{display:none}.tabs{gap:2px}.tabs a{padding:6px 9px;font-size:13px}}
+
+/* emotes */
+.emobar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.emobar .lbl{margin-right:auto}
+.emobar button{width:46px;height:46px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:25px;line-height:1;padding:0;display:grid;place-items:center;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;transition:transform .1s}
+.emobar button:active{transform:scale(.88)}
+[data-ek]{position:relative}
+.emo{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);font-size:30px;line-height:1;padding:5px 7px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 16px rgba(42,33,24,.16);z-index:8;pointer-events:none;white-space:nowrap;transition:opacity .8s;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.emo.pop{animation:emopop .4s cubic-bezier(.2,1.5,.4,1)}
+@keyframes emopop{from{scale:.3;opacity:0}}
+.emo.out{opacity:0}
+li[data-ek] .emo{left:-4px;top:-14px;bottom:auto;transform:none;font-size:20px;padding:2px 4px;border-radius:12px}
+.rivals span[data-ek] .emo{font-size:24px}
+@media (prefers-reduced-motion:reduce){.emo.pop{animation:none}}
 </style>
 </head>
 <body data-screen="home">
@@ -291,6 +305,59 @@ body:not([data-screen="home"]) .hero{display:none}
 })();
 </script>
 <script>
+// ---------- emotes: four reactions shared through room presence, shown for 20 seconds ----------
+const EMOTES = [["😄", "Happy"], ["🙂", "Smile"], ["😢", "Sad"], ["😐", "Neutral"]];
+const EMO = { seen: new Set(), live: new Map(), last: 0, ms: 20000 };
+const emoKey = p => p.sameTab ? "me" : (p.presence && typeof p.presence.uid === "string" ? "u:" + p.presence.uid : "p:" + p.peer);
+// pick up any new emote a friend has sent
+function emoIngest(peers) {
+  for (const p of peers || []) {
+    const m = p.presence && p.presence.emo;
+    if (!m || typeof m.id !== "string" || !EMOTES.some(x => x[0] === m.e)) continue;
+    const k = emoKey(p), tag = k + "|" + m.id;
+    if (EMO.seen.has(tag)) continue;
+    EMO.seen.add(tag);
+    if (p.sameTab) continue;
+    // an emote lasts 20 seconds from when it was sent, so one seen late (after switching tabs) shows only for what's left
+    const left = EMO.ms - Math.max(0, Date.now() - (Number(m.t) || 0));
+    if (left < 1000) continue;
+    emoShow(k, m.e, left);
+  }
+}
+function emoShow(k, e, ms = EMO.ms) {
+  EMO.live.set(k, { e, at: Date.now(), until: Date.now() + ms });
+  emoPaint();
+  setTimeout(emoPaint, ms + 50);
+}
+// draw (or fade) the bubble on every element tagged with a player's key
+function emoPaint() {
+  const now = Date.now();
+  document.querySelectorAll("[data-ek]").forEach(el => {
+    const v = EMO.live.get(el.dataset.ek), on = v && v.until > now;
+    let b = el.querySelector(":scope > .emo");
+    if (on) {
+      if (!b) { b = document.createElement("span"); b.className = "emo"; b.setAttribute("aria-hidden", "true"); el.appendChild(b); if (now - v.at < 400) b.classList.add("pop"); }
+      if (b.textContent !== v.e) { b.textContent = v.e; b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+      b.classList.remove("out");
+    } else if (b && !b.classList.contains("out")) { b.classList.add("out"); setTimeout(() => b.remove(), 900); }
+  });
+}
+function emoSend(e, send) {
+  if (Date.now() - EMO.last < 1200) return;
+  EMO.last = Date.now();
+  send({ emo: { e, id: Math.random().toString(36).slice(2, 10), t: Date.now() } });
+  emoShow("me", e);
+}
+// the row of four buttons
+function emoBar(id) {
+  return `<div class="emobar" id="${id}" role="group" aria-label="Send an emote"><span class="lbl">React</span>${EMOTES.map(([e, n]) => `<button type="button" data-emo="${e}" aria-label="${n}" title="${n}">${e}</button>`).join("")}</div>`;
+}
+function emoWire(root, send) {
+  if (!root) return;
+  root.querySelectorAll(".emobar").forEach(bar => bar.onclick = ev => { const b = ev.target.closest("[data-emo]"); if (b) emoSend(b.dataset.emo, send); });
+}
+</script>
+<script>
 (() => {
 "use strict";
 // ---------- helpers ----------
@@ -402,6 +469,7 @@ const S = {
   opts: store.get("wp.opts", { an: { size: 6, time: 60 }, hunt: { size: 4, time: 80 }, bites: { time: 80 } }),
   roomApi: null, roomState: "loading", room: null, code: null, joinAt: 0, seen: new Set(), lastStarted: 0, invite: null,
   wins: 0, tallied: new Set(), resUI: null,
+  uid: (() => { let u = store.get("wp.uid", null); if (!u) { u = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); store.set("wp.uid", u); } return u; })(),
 };
 let G = null, timer = null;
 const main = $("#main");
@@ -429,7 +497,7 @@ async function joinRoom(code, quiet) {
     const room = await S.roomApi.join("wp-" + code);
     S.room = room; S.code = code; S.joinAt = Date.now(); S.roomState = "ready"; store.set("wp.code", code);
     S.wins = loadWins(code); S.tallied = new Set();
-    room.presence({ nick: myName(), c: S.color, st: "lobby", wins: S.wins }).catch(() => {});
+    room.presence({ nick: myName(), c: S.color, uid: S.uid, st: "lobby", wins: S.wins }).catch(() => {});
     room.onPeers(onPeers, () => { S.room = null; S.code = null; if (S.screen === "home") render(); });
   } catch (e) { S.roomState = "ready"; if (!quiet) S.roomErr = "Couldn't join that room. Check the code and try again."; }
   if (S.screen === "home") render();
@@ -457,6 +525,7 @@ function tryTally() {
   if (o.result === "win") { S.wins++; saveWins(); pres({ wins: S.wins }); }
 }
 function onPeers() {
+  emoIngest(S.room ? S.room.peers() : []);
   tryTally();
   // a friend may have started a round: the newest proposal wins
   let newest = null;
@@ -552,8 +621,9 @@ function renderRoom() {
       <button class="btn ghost" id="cp">Copy code</button><button class="btn ghost" id="lv">Leave</button></div>
     ${inv}
     <div class="lbl">Players · wins this session</div>
-    <ul class="people">${list.map(p => `<li><span class="dot" style="background:${COLORS[(p.presence?.c | 0) % COLORS.length]}"></span><span>${esc(p.presence?.nick || "Player")}</span>${p.sameTab ? '<span class="you">you</span>' : ""}<span class="st">${peerStatus(p)}</span><span class="wn">${winsTxt(p.sameTab ? S.wins : p.presence?.wins)}</span></li>`).join("")}</ul>
+    <ul class="people">${list.map(p => `<li data-ek="${emoKey(p)}"><span class="dot" style="background:${COLORS[(p.presence?.c | 0) % COLORS.length]}"></span><span>${esc(p.presence?.nick || "Player")}</span>${p.sameTab ? '<span class="you">you</span>' : ""}<span class="st">${peerStatus(p)}</span><span class="wn">${winsTxt(p.sameTab ? S.wins : p.presence?.wins)}</span></li>`).join("")}</ul>
     ${list.length < 2 ? `<p class="muted" style="margin:0;font-size:13px">Waiting for your friend. They open Word Parlour on the site and enter <b>${esc(S.code.toUpperCase())}</b>.</p>` : `<p class="muted" style="margin:0;font-size:13px">Pick a game below. Whoever starts it starts it for everyone here.</p>`}`;
+  el.insertAdjacentHTML("beforeend", emoBar("emoRoom")); emoWire(el, pres); emoPaint();
   $("#lv").onclick = () => leaveRoom();
   $("#cp").onclick = e => { const b = e.currentTarget; navigator.clipboard?.writeText(S.code.toUpperCase()).then(() => b.textContent = "Copied", () => b.textContent = S.code.toUpperCase()).catch(() => {}); };
   if ($("#inv")) $("#inv").onclick = () => { const g = S.invite.g; S.invite = null; startGame(g, false); };
@@ -628,16 +698,19 @@ function renderPlay() {
     <div class="say" id="say"></div>
     <div id="arena"></div>
     <div class="foot"><button class="btn" id="end">End round and see all words</button></div>
+    ${S.room ? emoBar("emoPlay") : ""}
   </div>`;
   if (!G.time) $("#tbar").style.background = "var(--line)";
   $("#end").onclick = finish;
+  emoWire(main, pres);
   renderRivals(); renderInvite();
   if (G.type === "an") playAn(); else if (G.type === "hunt") playHunt(); else playBites();
 }
 function renderRivals() {
   const el = $("#rivals"); if (!el || !G) return;
   const rs = others().filter(p => p.presence?.gid === G.id);
-  el.innerHTML = rs.map(p => `<span><i class="dot" style="background:${COLORS[(p.presence.c | 0) % COLORS.length]}"></i>${esc(p.presence.nick || "Player")} ${fmt(p.presence.sc)}${p.presence.st === "done" ? " ✓" : ""}</span>`).join("");
+  el.innerHTML = (S.room ? `<span data-ek="me"><i class="dot" style="background:${COLORS[S.color % COLORS.length]}"></i>You</span>` : "") + rs.map(p => `<span data-ek="${emoKey(p)}"><i class="dot" style="background:${COLORS[(p.presence.c | 0) % COLORS.length]}"></i>${esc(p.presence.nick || "Player")} ${fmt(p.presence.sc)}${p.presence.st === "done" ? " ✓" : ""}</span>`).join("");
+  emoPaint();
 }
 function renderInvite() {
   const el = $("#invite"); if (!el) return;
@@ -818,7 +891,7 @@ function playBites() {
 function renderResults(live) {
   if (!G) return renderHome();
   const rs = others().filter(p => p.presence?.gid === G.id || p.presence?.last?.gid === G.id);
-  const rows = [{ nick: myName(), c: S.color, sc: G.score, n: G.found.length, me: true, done: true, wins: S.wins }, ...rs.map(p => { const fin = p.presence.last?.gid === G.id; return { nick: p.presence.nick || "Player", c: p.presence.c, sc: fin ? Number(p.presence.last.sc) || 0 : p.presence.sc || 0, n: p.presence.n || 0, done: fin, wins: p.presence.wins }; })].sort((a, b) => b.sc - a.sc);
+  const rows = [{ nick: myName(), c: S.color, sc: G.score, n: G.found.length, me: true, done: true, wins: S.wins, ek: "me" }, ...rs.map(p => { const fin = p.presence.last?.gid === G.id; return { ek: emoKey(p), nick: p.presence.nick || "Player", c: p.presence.c, sc: fin ? Number(p.presence.last.sc) || 0 : p.presence.sc || 0, n: p.presence.n || 0, done: fin, wins: p.presence.wins }; })].sort((a, b) => b.sc - a.sc);
   const oc = roundOutcome(G);
   const ocTxt = !oc ? "" : oc.pending ? "Waiting for everyone to finish…" : oc.result === "win" ? "You won this round" : oc.result === "draw" ? "It's a draw" : `${esc(oc.winner)} won this round`;
   // keep whatever the viewer opened or closed when the page refreshes with live scores
@@ -836,7 +909,7 @@ function renderResults(live) {
       <div class="big">${fmt(G.score)}</div>
       <p class="muted" style="margin:0">${G.found.length} of ${G.all.length} words${best ? ` · best: <b style="color:var(--text);text-transform:uppercase">${esc(best)}</b>` : ""}</p>
       ${ocTxt ? `<p class="outcome">${ocTxt}</p>` : ""}
-      ${rows.length > 1 ? `<ul class="board">${rows.map((r, i) => `<li class="${i === 0 && allDone && rows[1].sc !== r.sc ? "win" : ""}"><span class="dot" style="background:${COLORS[(r.c | 0) % COLORS.length]}"></span><span>${esc(r.nick)}</span>${r.me ? '<span class="you">you</span>' : ""}<span class="muted" style="font-size:13px">${r.n} words${r.done ? "" : " · still playing"}</span><span class="wn" style="margin-left:auto">${winsTxt(r.wins)}</span><b style="margin-left:0">${fmt(r.sc)}</b></li>`).join("")}</ul>` : ""}
+      ${rows.length > 1 ? `<ul class="board">${rows.map((r, i) => `<li data-ek="${r.ek}" class="${i === 0 && allDone && rows[1].sc !== r.sc ? "win" : ""}"><span class="dot" style="background:${COLORS[(r.c | 0) % COLORS.length]}"></span><span>${esc(r.nick)}</span>${r.me ? '<span class="you">you</span>' : ""}<span class="muted" style="font-size:13px">${r.n} words${r.done ? "" : " · still playing"}</span><span class="wn" style="margin-left:auto">${winsTxt(r.wins)}</span><b style="margin-left:0">${fmt(r.sc)}</b></li>`).join("")}</ul>` : ""}
       <div class="row"><button class="btn primary grow" id="again">${S.room ? "Play again (everyone)" : "Play again"}</button><button class="btn ghost" id="home">All games</button></div>
     </section>
     <details class="panel wpanel" id="wp"${S.resUI.panel ? " open" : ""}>
@@ -847,6 +920,8 @@ function renderResults(live) {
       </div>
     </details></div>`;
   if (live && S.screen === "results") { const y = window.scrollY; main.innerHTML = html; window.scrollTo(0, y); } else { main.innerHTML = html; window.scrollTo(0, 0); }
+  if (S.room) { main.querySelector(".panel").insertAdjacentHTML("beforeend", emoBar("emoRes")); emoWire(main, pres); }
+  emoPaint();
   $("#again").onclick = () => propose(G.type);
   $("#home").onclick = () => { pres({ st: "lobby" }); renderHome(); };
   if (S.invite && S.invite.g.id > S.lastStarted) {
