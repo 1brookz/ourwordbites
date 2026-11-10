@@ -364,9 +364,10 @@ body:not([data-screen="home"]) .hero{display:none}
 // ---------- Ludo rules engine (pure; no DOM) ----------
 // Colours, clockwise from top-left: 0 red, 1 green, 2 yellow, 3 blue.
 // A piece's progress p: -1 in yard, 0..50 on the main track (relative to its own start),
-// 51..55 in its home lane, 56 finished.
+// 51 the square directly behind its start (only reached by an African-rules backwards kick),
+// 52..56 in its home lane, 57 finished. From 50 or 51 the next step forwards is the home lane.
 const LUDO = (() => {
-  const N = 15, START = [0, 13, 26, 39], HOME = 56, LAST_TRACK = 50;
+  const N = 15, START = [0, 13, 26, 39], HOME = 57, LAST_TRACK = 51, LANE0 = 52;
   // the 52-square main track as [row, col], starting on red's start square and running clockwise
   const TRACK = [];
   const run = (r, c, dr, dc, n) => { for (let k = 0; k < n; k++) TRACK.push([r + dr * k, c + dc * k]); };
@@ -422,28 +423,28 @@ const LUDO = (() => {
     }
     return caps;
   }
-  // every legal move for colour c after rolling v
+  // one step forwards / backwards along a colour's route
+  const fwd = p => (p === 50 || p === 51) ? LANE0 : p + 1;
+  const back = p => p === 0 ? 51 : p - 1;   // behind the start wraps onto the end of the lap
+  const onTrack = p => p >= 0 && p <= LAST_TRACK;
+  // every legal move for colour c after rolling v; each move carries the squares it passes through
   function moves(pieces, c, v, african) {
     const out = [], mine = pieces[c];
     mine.forEach((p, i) => {
       if (p === HOME) return;
       if (p < 0) {
-        if (v === 6 && !blockedFor(pieces, START[c], c)) out.push({ i, from: -1, to: 0, dir: 1, caps: [] });
+        if (v === 6 && !blockedFor(pieces, START[c], c)) out.push({ i, from: -1, to: 0, dir: 1, caps: [], path: [0] });
         return;
       }
-      // forwards
-      const q = p + v;
-      if (q <= HOME) {
-        let ok = true;
-        for (let s = 1; s <= v && ok; s++) { const x = p + s; if (x <= LAST_TRACK && blockedFor(pieces, absOf(c, x), c)) ok = false; }
-        if (ok) out.push({ i, from: p, to: q, dir: 1, caps: q <= LAST_TRACK ? capturesAt(pieces, absOf(c, q), c, african) : [] });
-      }
-      // backwards: African rules only, main track only, never behind its own start, and only to capture
-      if (african && p <= LAST_TRACK && p - v >= 0) {
-        const b = p - v;
-        let ok = true;
-        for (let s = 1; s <= v && ok; s++) if (blockedFor(pieces, absOf(c, p - s), c)) ok = false;
-        if (ok) { const caps = capturesAt(pieces, absOf(c, b), c, true); if (caps.length) out.push({ i, from: p, to: b, dir: -1, caps }); }
+      // forwards (exact roll needed to finish)
+      let q = p, path = [], ok = true;
+      for (let s = 0; s < v; s++) { q = fwd(q); if (q > HOME) { ok = false; break; } path.push(q); if (onTrack(q) && blockedFor(pieces, absOf(c, q), c)) { ok = false; break; } }
+      if (ok) out.push({ i, from: p, to: q, dir: 1, caps: onTrack(q) ? capturesAt(pieces, absOf(c, q), c, african) : [], path });
+      // backwards: African rules only, on the main track, only when it captures; it may go behind its own start
+      if (african && onTrack(p)) {
+        let b = p, bpath = [], bok = true;
+        for (let s = 0; s < v; s++) { b = back(b); bpath.push(b); if (blockedFor(pieces, absOf(c, b), c)) { bok = false; break; } }
+        if (bok) { const caps = capturesAt(pieces, absOf(c, b), c, true); if (caps.length) out.push({ i, from: p, to: b, dir: -1, caps, path: bpath }); }
       }
     });
     return out;
@@ -456,8 +457,8 @@ const LUDO = (() => {
   }
   const finished = (pieces, c) => pieces[c].every(p => p === HOME);
   // the squares a piece passes through, for step-by-step animation
-  function path(m) { const out = []; if (m.from < 0) return [0]; for (let s = 1; s <= Math.abs(m.to - m.from); s++) out.push(m.from + s * m.dir); return out; }
-  return { N, START, HOME, LAST_TRACK, TRACK, LANE, OPP, SAFE, absOf, onSquare, moves, apply, finished, path };
+  const path = m => m.path || [m.to];
+  return { N, START, HOME, LAST_TRACK, LANE0, TRACK, LANE, OPP, SAFE, absOf, onSquare, moves, apply, finished, path, fwd, back };
 })();
 </script>
 <script>
@@ -525,7 +526,7 @@ async function leaveRoom(silent) { const r = S.room; S.room = null; S.code = nul
 // ---------- shared game state: everyone mirrors the newest copy ----------
 const newer = (a, b) => !b || a.gid > b.gid || (a.gid === b.gid && a.seq > b.seq);
 function validState(s) {
-  if (!s || s.game !== "ludo" || typeof s.gid !== "number" || typeof s.seq !== "number" || !(s.mode in MODES)) return false;
+  if (!s || s.game !== "ludo2" || typeof s.gid !== "number" || typeof s.seq !== "number" || !(s.mode in MODES)) return false;
   if (!Array.isArray(s.seats) || s.seats.length < 2 || s.seats.length > 4 || !Array.isArray(s.pieces) || s.pieces.length !== 4) return false;
   if (!s.seats.every(x => x && typeof x.uid === "string" && x.c >= 0 && x.c < 4 && Array.isArray(s.pieces[x.c]) && s.pieces[x.c].length === 4 && s.pieces[x.c].every(p => Number.isInteger(p) && p >= -1 && p <= L.HOME))) return false;
   return Number.isInteger(s.turn) && s.turn >= 0 && s.turn < s.seats.length && ["roll", "move", "over"].includes(s.phase) && s.dice && Number.isInteger(s.dice.v);
@@ -585,7 +586,7 @@ function startGame() {
   seats.forEach((x, i) => x.c = cols[i]);
   const pieces = [null, null, null, null];
   for (const x of seats) pieces[x.c] = [-1, -1, -1, -1];
-  const st = { game: "ludo", gid: Date.now(), seq: 1, mode: S.mode, seats, turn: 0, phase: "roll", pieces, dice: { v: 6, n: 0 }, last: null, note: `${myName()} started ${MODES[S.mode]} Ludo`, winner: null };
+  const st = { game: "ludo2", gid: Date.now(), seq: 1, mode: S.mode, seats, turn: 0, phase: "roll", pieces, dice: { v: 6, n: 0 }, last: null, note: `${myName()} started ${MODES[S.mode]} Ludo`, winner: null };
   S.screen = "home";
   adopt(st, true);
 }
@@ -613,7 +614,7 @@ function doMove(m) {
   act(st => {
     const seat = st.seats[st.turn], c = seat.c, v = st.dice.v;
     st.pieces = L.apply(st.pieces, c, m);
-    st.last = { c, i: m.i, from: m.from, to: m.to, dir: m.dir, caps: m.caps, seq: st.seq };
+    st.last = { c, i: m.i, from: m.from, to: m.to, dir: m.dir, caps: m.caps, path: m.path, seq: st.seq };
     const capNames = m.caps.map(k => { const s = st.seats.findIndex(x => x.c === k.c); return `${s >= 0 ? st.seats[s].nick : LNAME[k.c]}${k.how === "line" ? " (line capture)" : ""}`; });
     st.note = capNames.length ? `${seat.nick} captured ${capNames.join(" and ")}${m.dir < 0 ? " moving back" : ""}` : m.from < 0 ? `${seat.nick} brought a piece out` : m.to === L.HOME ? `${seat.nick} got a piece home` : "";
     if (L.finished(st.pieces, c)) { st.phase = "over"; st.winner = st.turn; st.note = `${seat.nick} got all four pieces home`; }
@@ -672,7 +673,7 @@ function renderLudoCard() {
 }
 function rulesList(mode) {
   const base = ["Roll a 6 to bring a piece out", "A 6 gives you another roll", "Land on a single opponent piece to send it home", "Two of your pieces on one square make a wall nobody can pass", "The four starting squares are the only safe squares", "You need the exact roll to reach the centre"];
-  const afr = ["Move a piece backwards only when that move captures", "Line capture: land straight across a coloured home lane from an opponent to capture it"];
+  const afr = ["Move a piece backwards only when that move captures, even back past your own start", "Kicking back past your start is a shortcut: those squares lead straight into your home lane", "Line capture: land straight across a coloured home lane, or across the end of an arm, from an opponent to capture it"];
   return (mode === "afr" ? [...base, ...afr] : base).map(x => `<li>${x}</li>`).join("");
 }
 function peerStatus(pr) {
@@ -778,7 +779,7 @@ const HOMEPT = [[7.5, 6.55], [6.55, 7.5], [7.5, 8.45], [8.45, 7.5]]; // [row, co
 function cellOf(c, i, p) {
   if (p < 0) { const [r0, c0] = YORG[c], [y, x] = YSPOT[i]; return { key: `y${c}${i}`, x: (c0 + x) * CS, y: (r0 + y) * CS }; }
   if (p === L.HOME) { const [r, cc] = HOMEPT[c]; const off = [[-.28, -.28], [.28, -.28], [-.28, .28], [.28, .28]][i]; return { key: `h${c}${i}`, x: (cc + off[0] * .9) * CS, y: (r + off[1] * .9) * CS, home: true }; }
-  const [r, cc] = p <= L.LAST_TRACK ? L.TRACK[L.absOf(c, p)] : L.LANE[c][p - 51];
+  const [r, cc] = p <= L.LAST_TRACK ? L.TRACK[L.absOf(c, p)] : L.LANE[c][p - L.LANE0];
   return { key: `${r},${cc}`, x: (cc + .5) * CS, y: (r + .5) * CS };
 }
 function renderPieces(pieces, override) {
@@ -883,7 +884,7 @@ function openRules() {
   const sh = document.createElement("div"); sh.className = "sheet";
   sh.innerHTML = `<div role="dialog" aria-label="Ludo rules"><div class="row"><h2 class="grow">Ludo rules</h2><button class="btn" id="cls">Close</button></div>
     <h3>Regular</h3><ul class="rules">${rulesList("reg")}</ul>
-    <h3>African rules adds</h3><ul class="rules"><li>On any roll you may move a piece backwards, but only if that move captures.</li><li>Direct capture: land on a single opponent piece.</li><li>Line capture: land on a square straight across a coloured home lane from a single opponent piece.</li><li>Backwards moves stay on the main track and never go behind your own starting square.</li></ul></div>`;
+    <h3>African rules adds</h3><ul class="rules"><li>On any roll you may move a piece backwards, but only if that move captures.</li><li>Direct capture: land on a single opponent piece.</li><li>Line capture: land on a square straight across a coloured home lane from a single opponent piece.</li><li>A backwards kick can take you back past your own starting square. The squares behind your start lead straight into your home lane, so it's a shortcut.</li></ul></div>`;
   document.body.appendChild(sh);
   sh.addEventListener("click", e => { if (e.target === sh || e.target.id === "cls") sh.remove(); });
 }
